@@ -1,0 +1,27 @@
+# 服务端口
+server.port: 8080
+
+solon.logging:
+  appender:
+    # 控制台日志输出级别
+    console:
+      level: INFO
+    # 文件日志输出级别
+    file:
+      level: INFO
+
+sa-token:
+  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
+  token-style: uuid
+  # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
+  is-concurrent: false
+  # 是否打印鉴权相关操作日志
+  is-log: true
+
+solon.dataSources:
+  mysql:
+    host: localhost
+    port: 3306
+    database: qin_server
+    username: root
+    password: 123456

@@ -1,12 +1,43 @@
-server.port: 8080
-
 solon.app:
-  name: 'demo-app'
-  group: 'demo'
+  name: 'QinServer'
+  group: 'xyz.apleax'
 
-solon.logging:
-  appender:
-    console:
-      level: INFO
-    file:
-      level: INFO
+server:
+  http:
+    gzip:
+    enable: true
+    minSize: 4096 #最小多少大小才启用（默认 4k）
+    mimeTypes: 'text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml'
+    coreThreads: 0
+    maxThreads: 0
+
+############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
+sa-token:
+  # token 名称（同时也是 cookie 名称）
+  token-name: AToken
+  # token 有效期（单位：秒） 默认30天，-1 代表永久有效
+  timeout: 86400
+  # token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
+  active-timeout: -1
+  # 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
+  is-share: false
+
+solon.dataSources:
+  mysql:
+    class: "com.zaxxer.hikari.HikariDataSource"
+    driverClassName: com.mysql.cj.jdbc.Driver
+
+# 配置数据源对应的 mybatis 信息（要与 DataSource bean 的名字对上）
+mybatis:
+  mysql:
+    typeAliases: #支持包名 或 类名（大写开头 或 *）//支持 ** 或 * 占位符
+      - "xyz.apleax.QinServer.SQL.PO.*"
+    mappers: #支持包名 或 类名（大写开头 或 *）或 xml（.xml结尾）//支持 ** 或 * 占位符
+      - "xyz.apleax.QinServer.SQL.Mapper.*"
+    configuration: #扩展配置（要与 MybatisConfiguration 类的属性一一对应）
+      cacheEnabled: false
+      mapperVerifyEnabled: false #如果为 true，则要求所有 mapper 有 @Mapper 主解
+      mapUnderscoreToCamelCase: true
+      logImpl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    globalConfig: #全局配置（要与 GlobalConfig 类的属性一一对应）
+      banner: false

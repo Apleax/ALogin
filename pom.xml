@@ -8,47 +8,76 @@
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
         <version>3.4.1</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>xyz.apleax</groupId>
     <artifactId>QinServer</artifactId>
     <version>0.0.1</version>
-    
+
     <packaging>jar</packaging>
 
     <description>琴服官网</description>
 
+    <!-- 依赖版本 -->
     <properties>
         <java.version>21</java.version>
+        <mybatis-plus.version>3.5.11</mybatis-plus.version>
+        <jsqlparser.version>3.5.11</jsqlparser.version>
+        <HikariCP.version>7.0.0</HikariCP.version>
+        <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
     </properties>
 
     <dependencies>
+        <!-- Web核心 -->
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>solon-web</artifactId>
         </dependency>
-        
+        <!-- 日志 -->
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>solon-logging-logback</artifactId>
         </dependency>
-        
+        <!-- lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
-
+        <!-- mybatis-plus -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-solon-plugin</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <!-- SQL解析器 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
+        </dependency>
+        <!-- 数据库连接池HikariCP -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${HikariCP.version}</version>
+        </dependency>
+        <!-- MySQL驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${MySQL-Driver.version}</version>
+        </dependency>
+        <!-- banner打印 -->
         <dependency>
             <groupId>org.noear</groupId>
-            <artifactId>solon-test</artifactId>
-            <scope>test</scope>
+            <artifactId>solon-config-banner</artifactId>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>${project.artifactId}-${project.version}</finalName>
+        <finalName>${project.artifactId}</finalName>
 
         <plugins>
             <plugin>
@@ -57,15 +86,15 @@
             </plugin>
         </plugins>
     </build>
-    
-    <repositories>		
+
+    <repositories>
         <repository>
-			<id>tencent</id>
-			<url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
+            <id>tencent</id>
+            <url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
 </project>
