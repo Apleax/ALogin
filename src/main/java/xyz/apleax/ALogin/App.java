@@ -1,4 +1,4 @@
-package xyz.apleax.QinServer;
+package xyz.apleax.ALogin;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
@@ -19,13 +19,12 @@ public class App {
         Solon.start(App.class, args, app -> {
             app.filter(-1, new CrossFilter());
             String appName = Solon.cfg().appName();
-            if (ResourceUtil.findResource("file:" + appName) == null)
-                if (!createDir(appName) || !createFile(appName)) Solon.stop();
-            String configPath = appName + "/config.yml";
-            if (Solon.cfg().env() != null &&
-                    !Solon.cfg().env().isEmpty() &&
-                    Solon.cfg().env().equals("dev")) configPath = appName + "/config-dev.yml"; // 直接重新赋值
-            Solon.cfg().loadAdd(configPath);
+            if (ResourceUtil.findResource("file:" + appName) == null) if (!createDir(appName) || !createFile(appName)) {
+                log.error("Initialization failed");
+                Solon.stop();
+            }
+            Solon.cfg().loadAdd(appName + "/config.yml");
+            log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }
 
@@ -33,6 +32,7 @@ public class App {
     // 创建目录
     private static boolean createDir(String appName) {
         String[] list = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
+        if (list.length == 0) return false;
         list = Arrays.stream(list)
                 .map(s -> s.substring(0, s.lastIndexOf("/")))
                 .toArray(String[]::new);
@@ -51,6 +51,7 @@ public class App {
     // 复制配置文件
     private static boolean createFile(String appName) {
         String[] list = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
+        if (list.length == 0) return false;
         for (String s : list)
             try (InputStream inputStream = ResourceUtil.getResourceAsStream(s);
                  FileOutputStream outputStream = new FileOutputStream(ResourceUtil.findResource("file:").getPath().substring(1) + s)) {

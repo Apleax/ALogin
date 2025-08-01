@@ -1,4 +1,4 @@
-package xyz.apleax.QinServer.SQL.PO;
+package xyz.apleax.ALogin.SQL.PO;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;

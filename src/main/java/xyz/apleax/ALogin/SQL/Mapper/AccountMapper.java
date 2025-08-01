@@ -1,8 +1,8 @@
-package xyz.apleax.QinServer.SQL.Mapper;
+package xyz.apleax.ALogin.SQL.Mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
-import xyz.apleax.QinServer.SQL.PO.Account;
+import xyz.apleax.ALogin.SQL.PO.Account;
 
 /**
  * @author Apleax

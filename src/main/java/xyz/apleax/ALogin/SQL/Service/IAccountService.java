@@ -1,7 +1,7 @@
-package xyz.apleax.QinServer.SQL.Service;
+package xyz.apleax.ALogin.SQL.Service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import xyz.apleax.QinServer.SQL.PO.Account;
+import xyz.apleax.ALogin.SQL.PO.Account;
 
 /**
  * @author Apleax

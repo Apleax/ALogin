@@ -12,20 +12,23 @@
     </parent>
 
     <groupId>xyz.apleax</groupId>
-    <artifactId>QinServer</artifactId>
-    <version>0.0.1</version>
+    <artifactId>ALogin</artifactId>
+    <version>0.0.3</version>
 
     <packaging>jar</packaging>
 
-    <description>琴服官网</description>
+    <description>适配MC的统一单点登录中心</description>
 
     <!-- 依赖版本 -->
     <properties>
+        <project.version>${project.version}</project.version>
         <java.version>21</java.version>
         <mybatis-plus.version>3.5.11</mybatis-plus.version>
         <jsqlparser.version>3.5.11</jsqlparser.version>
         <HikariCP.version>7.0.0</HikariCP.version>
         <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
+        <simple-java-mail>8.12.6</simple-java-mail>
+        <sa-token.version>1.44.0</sa-token.version>
     </properties>
 
     <dependencies>
@@ -74,10 +77,39 @@
             <groupId>org.noear</groupId>
             <artifactId>solon-config-banner</artifactId>
         </dependency>
+        <!-- 邮箱 -->
+        <dependency>
+            <groupId>org.simplejavamail</groupId>
+            <artifactId>simple-java-mail</artifactId>
+            <version>${simple-java-mail}</version>
+        </dependency>
+        <!-- Sa-Token -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-solon-plugin</artifactId>
+            <version>${sa-token.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${project.artifactId}</finalName>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>*.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>*.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
 
         <plugins>
             <plugin>

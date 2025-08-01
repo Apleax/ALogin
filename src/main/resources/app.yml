@@ -1,6 +1,7 @@
 solon.app:
-  name: 'QinServer'
+  name: 'ALogin'
   group: 'xyz.apleax'
+  version: @project.version@
 
 server:
   http:
@@ -15,6 +16,8 @@ server:
 sa-token:
   # token 名称（同时也是 cookie 名称）
   token-name: AToken
+  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
+  token-style: uuid
   # token 有效期（单位：秒） 默认30天，-1 代表永久有效
   timeout: 86400
   # token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
@@ -31,9 +34,9 @@ solon.dataSources:
 mybatis:
   mysql:
     typeAliases: #支持包名 或 类名（大写开头 或 *）//支持 ** 或 * 占位符
-      - "xyz.apleax.QinServer.SQL.PO.*"
+      - "xyz.apleax.ALogin.SQL.PO.*"
     mappers: #支持包名 或 类名（大写开头 或 *）或 xml（.xml结尾）//支持 ** 或 * 占位符
-      - "xyz.apleax.QinServer.SQL.Mapper.*"
+      - "xyz.apleax.ALogin.SQL.Mapper.*"
     configuration: #扩展配置（要与 MybatisConfiguration 类的属性一一对应）
       cacheEnabled: false
       mapperVerifyEnabled: false #如果为 true，则要求所有 mapper 有 @Mapper 主解

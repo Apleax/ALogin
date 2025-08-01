@@ -1,3 +1,6 @@
+# 服务器名字
+ServerName: QinServer
+
 # 服务端口
 server.port: 8080
 
@@ -11,13 +14,31 @@ solon.logging:
       level: INFO
 
 sa-token:
-  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
-  token-style: uuid
   # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
   is-concurrent: false
   # 是否打印鉴权相关操作日志
   is-log: true
 
+# 邮箱配置块
+EmailConfig:
+  # 提供邮件发送服务的服务器
+  HostName: "smtp.example.com"
+  # 发件人信息
+  From:
+    # 发件人邮箱
+    Email: "example@example.com"
+    # 发件人昵称
+    Name: "Apleax"
+  # 邮件主题
+  Subject: "A message from Apleax"
+  # 邮件服务器登录认证信息
+  Authentication:
+    UserName: "example@example.com"
+    Password: "your key"
+  # 邮件服务器端口
+  Port: 465
+
+# 数据库配置块
 solon.dataSources:
   mysql:
     host: localhost
