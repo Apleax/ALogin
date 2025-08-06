@@ -17,7 +17,7 @@ sa-token:
   # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
   is-concurrent: false
   # 是否打印鉴权相关操作日志
-  is-log: true
+  is-log: false
 
 # 邮箱配置块
 EmailConfig:
@@ -39,10 +39,16 @@ EmailConfig:
   Port: 465
 
 # 数据库配置块
-solon.dataSources:
-  mysql:
-    host: localhost
-    port: 3306
-    database: qin_server
-    username: root
-    password: 123456
+DataBase:
+  # 可选数据库: MYSQL
+  choose: MYSQL
+  host: localhost
+  port: 3306
+  database: qin_server
+  username: root
+  password: 123456
+
+Security:
+  encryption:
+    # 加密算法: SHA512, Argon2
+    algorithm: SHA512

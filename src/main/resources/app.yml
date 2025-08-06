@@ -25,21 +25,16 @@ sa-token:
   # 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
   is-share: false
 
-solon.dataSources:
-  mysql:
-    class: "com.zaxxer.hikari.HikariDataSource"
-    driverClassName: com.mysql.cj.jdbc.Driver
-
 # 配置数据源对应的 mybatis 信息（要与 DataSource bean 的名字对上）
 mybatis:
-  mysql:
+  DataBase:
     typeAliases: #支持包名 或 类名（大写开头 或 *）//支持 ** 或 * 占位符
-      - "xyz.apleax.ALogin.SQL.PO.*"
+      - "xyz.apleax.ALogin.Entity.PO.*"
     mappers: #支持包名 或 类名（大写开头 或 *）或 xml（.xml结尾）//支持 ** 或 * 占位符
       - "xyz.apleax.ALogin.SQL.Mapper.*"
     configuration: #扩展配置（要与 MybatisConfiguration 类的属性一一对应）
       cacheEnabled: false
-      mapperVerifyEnabled: false #如果为 true，则要求所有 mapper 有 @Mapper 主解
+      mapperVerifyEnabled: true #如果为 true，则要求所有 mapper 有 @Mapper 主解
       mapUnderscoreToCamelCase: true
       logImpl: org.apache.ibatis.logging.slf4j.Slf4jImpl
     globalConfig: #全局配置（要与 GlobalConfig 类的属性一一对应）
