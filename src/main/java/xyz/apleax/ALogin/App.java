@@ -1,6 +1,7 @@
 package xyz.apleax.ALogin;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.SolonMain;
 import org.noear.solon.core.util.ResourceUtil;
@@ -10,6 +11,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.Security;
 import java.util.Arrays;
 
 @Slf4j
@@ -23,7 +25,12 @@ public class App {
                 log.error("Initialization failed");
                 Solon.stop();
             }
-            Solon.cfg().loadAdd(appName + "/config.yml");
+            Security.addProvider(new BouncyCastleProvider());
+            String configPath = appName + "/config.yml";
+            if (Solon.cfg().env() != null &&
+                    !Solon.cfg().env().isEmpty() &&
+                    Solon.cfg().env().equals("dev")) configPath = appName + "/config-dev.yml";
+            Solon.cfg().loadAdd(configPath);
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }
