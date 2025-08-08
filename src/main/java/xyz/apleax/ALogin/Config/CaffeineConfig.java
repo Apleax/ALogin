@@ -10,6 +10,7 @@ import org.noear.solon.annotation.Configuration;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Entity.PO.AccountPO;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.Enum.AccountIndex;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
@@ -33,12 +34,12 @@ public class CaffeineConfig {
     }
 
     private static void onRemoval(Object key, Object value, RemovalCause cause) {
-        log.info(CACHE_REMOVED_SIMPLE, key, value, cause);
+        log.debug(CACHE_REMOVED_SIMPLE, key, value, cause);
     }
 
     //验证码缓存
     @Bean(name = "VerifyCode", index = -100)
-    public LoadingCache<String, VerifyCodePOJO> VerifyCode() {
+    public LoadingCache<VerifyCodeKey, VerifyCodePOJO> VerifyCode() {
         return Caffeine.newBuilder()
                 .removalListener(CaffeineConfig::onRemoval)
                 .maximumSize(500)
@@ -47,7 +48,7 @@ public class CaffeineConfig {
                 .recordStats()
                 .build(k -> {
                     if (accountService.count(new LambdaQueryWrapper<AccountPO>()
-                            .eq(AccountPO::getEmail, k)) > 0) return null;
+                            .eq(AccountPO::getEmail, k.email())) > 0) return null;
                     return new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null);
                 });
     }
@@ -76,30 +77,30 @@ public class CaffeineConfig {
                 .refreshAfterWrite(Duration.ofHours(1))
                 .recordStats()
                 .build(Index -> {
-                    AccountIndex accountIndex = Index.getIndex();
+                    AccountIndex accountIndex = Index.index();
                     switch (accountIndex) {
                         case ACCOUNT -> {
                             AccountPO account = accountService.getOne(new LambdaQueryWrapper<AccountPO>()
                                     .select(AccountPO::getAccount)
-                                    .eq(AccountPO::getAccount, Index.getValue()));
+                                    .eq(AccountPO::getAccount, Index.value()));
                             return account != null ? account.getAccount() : null;
                         }
                         case EMAIL -> {
                             AccountPO account = accountService.getOne(new LambdaQueryWrapper<AccountPO>()
                                     .select(AccountPO::getAccount)
-                                    .eq(AccountPO::getEmail, Index.getValue()));
+                                    .eq(AccountPO::getEmail, Index.value()));
                             return account != null ? account.getAccount() : null;
                         }
                         case QQ_ACCOUNT -> {
                             AccountPO account = accountService.getOne(new LambdaQueryWrapper<AccountPO>()
                                     .select(AccountPO::getAccount)
-                                    .eq(AccountPO::getQqAccount, Index.getValue()));
+                                    .eq(AccountPO::getQqAccount, Index.value()));
                             return account != null ? account.getAccount() : null;
                         }
                         case MC_UUID -> {
                             AccountPO account = accountService.getOne(new LambdaQueryWrapper<AccountPO>()
                                     .select(AccountPO::getAccount)
-                                    .eq(AccountPO::getMcUuid, Index.getValue()));
+                                    .eq(AccountPO::getMcUuid, Index.value()));
                             return account != null ? account.getAccount() : null;
                         }
                         default -> {

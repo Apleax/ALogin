@@ -23,6 +23,7 @@ public class EncryptionConfig {
     @Bean(index = -100, name = "Algorithm")
     public PasswordEncryptor passwordEncryptor() {
         PasswordEncryptor encryptor = selector.select(algorithm);
+        if (encryptor == null) throw new IllegalArgumentException("No encryption algorithm found for: " + algorithm);
         log.info("Using encryption algorithm: {}", encryptor.algorithmName());
         return encryptor;
     }

@@ -10,13 +10,16 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.ConvertMapper.AccountAPIConvert;
+import xyz.apleax.ALogin.Entity.DTO.LoginByEmailDTO;
 import xyz.apleax.ALogin.Entity.DTO.RegisterDTO;
 import xyz.apleax.ALogin.Entity.PO.AccountPO;
+import xyz.apleax.ALogin.Entity.PO.LoginPO;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
-import xyz.apleax.ALogin.Entity.VO.RegisterVO;
 import xyz.apleax.ALogin.Enum.AccountIndex;
 import xyz.apleax.ALogin.Enum.LoginDeviceType;
+import xyz.apleax.ALogin.Enum.VerifyCodeType;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Service.AccountService;
 import xyz.apleax.ALogin.Util.EmailVerifyCodeUtil;
@@ -32,7 +35,7 @@ public class AccountServiceImpl implements AccountService {
     @Ds("DataBase")
     private IAccountService accountService;
     @Inject("VerifyCode")
-    private LoadingCache<String, VerifyCodePOJO> verifyCodeCache;
+    private LoadingCache<VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
     @Inject("AccountCache")
     private LoadingCache<String, AccountPO> accountCache;
     @Inject("AccountIndexCache")
@@ -41,14 +44,30 @@ public class AccountServiceImpl implements AccountService {
     private PasswordEncryptor encryptor;
 
     @Override
-    public Result<RegisterVO> register(RegisterDTO registerDTO) throws Exception {
+    public Result<SaTokenInfo> register(RegisterDTO registerDTO) throws Exception {
         AccountPO accountPO = AccountAPIConvert.INSTANCE.registerDTOToAccountPO(registerDTO);
-        VerifyCodePOJO verifyCode = verifyCodeCache.get(accountPO.getEmail());
-        if (verifyCode == null || !verifyCode.getVerifyCode().equals(registerDTO.getVerify_code()))
+        if (checkVerifyCode(new VerifyCodeKey(registerDTO.getEmail(), VerifyCodeType.REGISTER), registerDTO.getVerify_code()))
             return Result.failure("验证码错误");
-        verifyCodeCache.invalidate(accountPO.getEmail());
         String accountId = accountIndexCache.get(new AccountIndexCache(AccountIndex.EMAIL, accountPO.getEmail()));
         if (accountId != null) return Result.failure("该邮箱已注册");
+        accountPO = createAccount(accountPO);
+        if (accountPO == null) return Result.failure("注册失败");
+        if (!accountService.save(accountPO)) return Result.failure("注册失败");
+        accountIndexCache.put(new AccountIndexCache(AccountIndex.ACCOUNT, accountPO.getAccount()), accountPO.getAccount());
+        accountCache.put(accountPO.getAccount(), accountPO);
+        StpUtil.login(accountPO.getAccount(), LoginDeviceType.getKeyByValue(LoginDeviceType.BROWSER));
+        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        return Result.succeed(tokenInfo);
+    }
+
+    private boolean checkVerifyCode(VerifyCodeKey key, String verifyCode) {
+        VerifyCodePOJO code = verifyCodeCache.get(key);
+        if (code == null || !code.getVerifyCode().equals(verifyCode)) return true;
+        verifyCodeCache.invalidate(key);
+        return false;
+    }
+
+    private AccountPO createAccount(AccountPO accountPO) throws Exception {
         for (int i = 0; i < 10; i++) {
             String account = RandomStringUtils.generateNum(8);
             if (account.charAt(0) == '0') continue;
@@ -58,25 +77,20 @@ public class AccountServiceImpl implements AccountService {
             accountPO.setAccount(account);
             break;
         }
-        if (accountPO.getAccount() == null) return Result.failure("帐号生成失败，请尝试重试");
+        if (accountPO.getAccount() == null) return null;
         accountPO.setRegistrationTime(System.currentTimeMillis() / 1000);
         accountPO.setNickName("用户" + accountPO.getAccount());
         String salt = RandomStringUtils.generateLowerUpper(32);
-        String password = encryptor.encrypt(registerDTO.getPassword(), salt);
+        String password = encryptor.encrypt(accountPO.getPassword(), salt);
         accountPO.setPassword(password);
         accountPO.setSalt(salt);
         accountPO.setAlgorithm(encryptor.algorithmName());
-        if (!accountService.save(accountPO)) return Result.failure("注册失败");
-        accountIndexCache.put(new AccountIndexCache(AccountIndex.ACCOUNT, accountPO.getAccount()), accountPO.getAccount());
-        accountCache.put(accountPO.getAccount(), accountPO);
-        StpUtil.login(accountPO.getAccount(), LoginDeviceType.getKeyByValue(LoginDeviceType.BROWSER));
-        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-        return Result.succeed(new RegisterVO(accountPO.getAccount(), tokenInfo));
+        return accountPO;
     }
 
     @Override
-    public Result<Long> emailVerifyCode(String email) {
-        VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(email);
+    public Result<Long> registerVerifyCode(String email) {
+        VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(new VerifyCodeKey(email, VerifyCodeType.REGISTER));
         if (verifyCodePOJO == null) return Result.failure(Result.FAILURE_CODE, "该邮箱已注册");
         if (verifyCodePOJO.getTime() != null) {
             long remainderTime = (System.currentTimeMillis() / 1000 - verifyCodePOJO.getTime());
@@ -86,5 +100,21 @@ public class AccountServiceImpl implements AccountService {
         String VCode = verifyCodePOJO.getVerifyCode();
         EmailVerifyCodeUtil.sendAsync(email, VCode);
         return Result.succeed();
+    }
+
+    @Override
+    public Result<SaTokenInfo> loginByEmail(LoginByEmailDTO loginByEmailDTO) throws Exception {
+        LoginDeviceType loginDeviceType = LoginDeviceType.getValueByKey(loginByEmailDTO.getLogin_type());
+        if (loginDeviceType == null) return Result.failure("登录类型错误");
+        LoginPO loginPO = AccountAPIConvert.INSTANCE.loginByEmailDTOToLoginPO(loginByEmailDTO);
+        String accountId = accountIndexCache.get(new AccountIndexCache(AccountIndex.EMAIL, loginPO.getEmail()));
+        AccountPO accountPO = null;
+        if (accountId != null) accountPO = accountCache.get(accountId);
+        if (accountPO == null) return Result.failure("邮箱或密码错误");
+        String password = encryptor.encrypt(loginByEmailDTO.getPassword(), accountPO.getSalt());
+        if (!accountPO.getPassword().equals(password)) return Result.failure("邮箱或密码错误");
+        StpUtil.login(accountPO.getAccount(), loginDeviceType.getKey());
+        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        return Result.succeed(tokenInfo);
     }
 }

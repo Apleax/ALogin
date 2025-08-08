@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
@@ -23,8 +22,7 @@ public class DataBaseConfig {
         switch (dbProps.getChoose().toLowerCase()) {
             case "mysql" -> ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
             default -> {
-                log.error("数据库类型错误");
-                Solon.stopBlock();
+                throw new IllegalArgumentException("The database type is wrong: " + dbProps.getChoose());
             }
         }
         String jdbcUrl = buildJdbcUrl(dbProps);

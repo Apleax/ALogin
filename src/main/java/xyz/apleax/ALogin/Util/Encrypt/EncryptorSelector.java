@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.Util.Encrypt;
 
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.Solon;
 import org.noear.solon.annotation.Component;
 
 import java.util.List;
@@ -27,10 +26,6 @@ public class EncryptorSelector {
         log.debug("Trying to select algorithm: {}", algorithm);
         PasswordEncryptor encryptor = encryptors.get(algorithm.toUpperCase());
         log.debug("Available encryptors: {}", encryptors.keySet());
-        if (encryptor == null) {
-            log.error("Unsupported algorithm: {}", algorithm);
-            Solon.stopBlock();
-        }
         return encryptor;
     }
 }

@@ -18,7 +18,7 @@ public class SaTokenInterceptorConfig {
         return new SaTokenInterceptor()
                 // 指定 [拦截路由] 与 [放行路由]
                 .addInclude("/**").addExclude("/account/Register", "/account/LoginByEmail",
-                        "/account/LoginByAccount", "/account/VerifyCode")
+                        "/account/LoginByAccount", "/account/RegisterVerifyCode")
 
                 // 认证函数: 每次请求执行
                 .setAuth(req -> SaRouter.match("/**", StpUtil::checkLogin))
