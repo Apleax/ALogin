@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.Config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
@@ -46,8 +45,7 @@ public class SimpleJavaMailConfig {
                 mailerRegularBuilder.withTransportStrategy(TransportStrategy.SMTP);
                 break;
             default:
-                Solon.stopBlock(true, 0);
-                throw new IllegalArgumentException("邮件服务器端口错误");
+                throw new IllegalArgumentException("Mail server port error: " + Port);
         }
         return mailerRegularBuilder.buildMailer();
     }

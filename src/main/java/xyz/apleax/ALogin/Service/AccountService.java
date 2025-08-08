@@ -1,8 +1,9 @@
 package xyz.apleax.ALogin.Service;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
 import org.noear.solon.core.handle.Result;
+import xyz.apleax.ALogin.Entity.DTO.LoginByEmailDTO;
 import xyz.apleax.ALogin.Entity.DTO.RegisterDTO;
-import xyz.apleax.ALogin.Entity.VO.RegisterVO;
 
 /**
  * 账号Service
@@ -17,7 +18,7 @@ public interface AccountService {
      * @return 注册结果
      * @author Apleax
      */
-    Result<RegisterVO> register(RegisterDTO registerDTO) throws Exception;
+    Result<SaTokenInfo> register(RegisterDTO registerDTO) throws Exception;
 
     /**
      * 邮箱验证码
@@ -25,5 +26,13 @@ public interface AccountService {
      * @param email 邮箱
      * @author Apleax
      */
-    Result<Long> emailVerifyCode(String email);
+    Result<Long> registerVerifyCode(String email);
+
+    /**
+     * 通过邮箱登录
+     *
+     * @param loginByEmailDTO 登录信息: 邮箱 密码
+     * @author Apleax
+     */
+    Result<SaTokenInfo> loginByEmail(LoginByEmailDTO loginByEmailDTO) throws Exception;
 }

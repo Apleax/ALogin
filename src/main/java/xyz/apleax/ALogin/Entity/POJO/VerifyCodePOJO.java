@@ -9,6 +9,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class VerifyCodePOJO {
-    private String VerifyCode;
-    private Long Time;
+    private String verifyCode;
+    private Long time;
 }

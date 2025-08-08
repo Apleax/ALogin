@@ -3,13 +3,14 @@ package xyz.apleax.ALogin.Enum;
 import lombok.Getter;
 
 /**
- * 登陆设备类型
+ * 登陆来源
  *
  * @author Apleax
  */
 @Getter
 public enum LoginDeviceType {
-    BROWSER("Browser");
+    BROWSER("Browser"),
+    MINECRAFT("Minecraft");
     private final String key;
 
     LoginDeviceType(String key) {
