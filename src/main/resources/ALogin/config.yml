@@ -53,5 +53,5 @@ DataBase:
 
 Security:
   encryption:
-    # 加密算法: SHA512, Argon2
+    # 加密算法: SHA256, SHA512, Argon2
     algorithm: SHA512
