@@ -45,7 +45,7 @@ public final class EmailVerifyCodeUtil {
      */
     public static void sendAsync(String email, String verifyCode) {
         try {
-            String VCodeHTML = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/VCode.html")
+            String VCodeHTML = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/RegVerifyCode.html")
                     .replace("<servername/>", Server)
                     .replace("<generatedcode/>", verifyCode)
                     .replace("<time/>", LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));

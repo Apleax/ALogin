@@ -13,7 +13,7 @@
 
     <groupId>xyz.apleax</groupId>
     <artifactId>ALogin</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 
     <packaging>jar</packaging>
 
@@ -27,6 +27,7 @@
         <jsqlparser.version>3.5.11</jsqlparser.version>
         <HikariCP.version>7.0.0</HikariCP.version>
         <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
+        <SQLServer-Driver.version>12.10.1.jre11</SQLServer-Driver.version>
         <simple-java-mail>8.12.6</simple-java-mail>
         <sa-token.version>1.44.0</sa-token.version>
         <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
@@ -74,6 +75,13 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>${MySQL-Driver.version}</version>
+        </dependency>
+        <!-- SQLServer驱动 -->
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>${SQLServer-Driver.version}</version>
+            <scope>compile</scope>
         </dependency>
         <!-- banner打印 -->
         <dependency>

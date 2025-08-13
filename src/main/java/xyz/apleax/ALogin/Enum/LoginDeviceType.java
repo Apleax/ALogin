@@ -10,7 +10,8 @@ import lombok.Getter;
 @Getter
 public enum LoginDeviceType {
     BROWSER("Browser"),
-    MINECRAFT("Minecraft");
+    MINECRAFT("Minecraft"),
+    BOT("Bot");
     private final String key;
 
     LoginDeviceType(String key) {

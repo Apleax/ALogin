@@ -1,9 +1,10 @@
 package xyz.apleax.ALogin.Enum;
 
 /**
+ * 验证码用途枚举
+ *
  * @author Apleax
  */
-// 验证码用途枚举
 public enum VerifyCodeType {
     REGISTER,
     LOGIN,
