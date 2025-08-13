@@ -2,8 +2,11 @@ package xyz.apleax.ALogin;
 
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.fusesource.jansi.AnsiConsole;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.SolonMain;
+import org.noear.solon.core.util.ClassUtil;
+import org.noear.solon.core.util.JavaUtil;
 import org.noear.solon.core.util.ResourceUtil;
 import org.noear.solon.web.cors.CrossFilter;
 
@@ -19,6 +22,12 @@ import java.util.Arrays;
 public class App {
     public static void main(String[] args) {
         Solon.start(App.class, args, app -> {
+            if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
+                if (ClassUtil.hasClass(() -> AnsiConsole.class)) try {
+                    AnsiConsole.systemInstall();
+                } catch (Throwable e) {
+                    log.warn("Failed to initialize AnsiConsole");
+                }
             app.filter(-1, new CrossFilter());
             String appName = Solon.cfg().appName();
             String[] requiredResources = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
@@ -40,12 +49,12 @@ public class App {
         }
         boolean needsInitialization = ResourceUtil.findResource("file:" + appName) == null;
         if (needsInitialization) {
-            log.info("Initialization......");
+            log.info("ConfigFile Initialization...");
             if (!createDirectories(requiredResources) || !copyAllConfigFiles(requiredResources)) {
                 log.error("Initialization failed");
                 Solon.stopBlock();
             }
-            log.info("Initialization completed");
+            log.info("ConfigFile Initialization completed");
         } else checkAndRecoverMissingFiles(requiredResources);
     }
 
@@ -80,7 +89,6 @@ public class App {
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) outputStream.write(buffer, 0, bytesRead);
-            log.debug("Successfully recovered file: {}", resourcePath);
             return false;
         } catch (IOException e) {
             log.error("Failed to recover file: {}", resourcePath, e);

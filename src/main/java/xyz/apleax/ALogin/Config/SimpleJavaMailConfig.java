@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.core.bean.LifecycleBean;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.api.mailer.config.TransportStrategy;
 import org.simplejavamail.mailer.MailerBuilder;
@@ -16,7 +17,13 @@ import org.simplejavamail.mailer.internal.MailerRegularBuilderImpl;
  */
 @Slf4j
 @Configuration
-public class SimpleJavaMailConfig {
+public record SimpleJavaMailConfig() implements LifecycleBean {
+
+    @Override
+    public void start() throws Throwable {
+        log.info("SimpleJavaMailConfig Loading Complete");
+    }
+
     // 邮件服务器地址
     @Inject("${EmailConfig.HostName}")
     private static String HostName;

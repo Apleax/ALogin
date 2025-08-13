@@ -24,6 +24,8 @@ sa-token:
   active-timeout: -1
   # 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
   is-share: false
+  isPrint: false
+  isColorLog: true
 
 # 配置数据源对应的 mybatis 信息（要与 DataSource bean 的名字对上）
 mybatis:

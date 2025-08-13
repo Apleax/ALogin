@@ -4,22 +4,35 @@ import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.solon.integration.SaTokenInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
+import org.noear.solon.core.bean.LifecycleBean;
 
 /**
  * Sa-Token 路由过滤器配置
  */
+@Slf4j
 @Configuration
-public class SaTokenInterceptorConfig {
+public record SaTokenInterceptorConfig() implements LifecycleBean {
+
+    @Override
+    public void start() {
+        log.info("SaToken Loading Complete");
+    }
+
     @Bean(index = -100)  //-100，是顺序位（低值优先）
     public SaTokenInterceptor saTokenInterceptor() {
         return new SaTokenInterceptor()
                 // 指定 [拦截路由] 与 [放行路由]
-                .addInclude("/**").addExclude("/account/Register", "/account/LoginByEmail",
-                        "/account/LoginByAccount", "/account/RegisterVerifyCode")
-
+                .addInclude("/**").addExclude(
+                        "/account/Register",
+                        "/account/LoginByEmail",
+                        "/account/LoginByAccount",
+                        "/account/RegisterVerifyCode",
+                        "/account/LoginByMcUuid"
+                )
                 // 认证函数: 每次请求执行
                 .setAuth(req -> SaRouter.match("/**", StpUtil::checkLogin))
                 // 前置函数：在每次认证函数之前执行

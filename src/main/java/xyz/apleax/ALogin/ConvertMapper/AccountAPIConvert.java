@@ -3,6 +3,7 @@ package xyz.apleax.ALogin.ConvertMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import xyz.apleax.ALogin.Entity.DTO.LoginByEmailDTO;
+import xyz.apleax.ALogin.Entity.DTO.LoginByMcUuidDTO;
 import xyz.apleax.ALogin.Entity.DTO.RegisterDTO;
 import xyz.apleax.ALogin.Entity.PO.AccountPO;
 import xyz.apleax.ALogin.Entity.PO.LoginPO;
@@ -17,4 +18,6 @@ public interface AccountAPIConvert {
     AccountPO registerDTOToAccountPO(RegisterDTO registerDTO);
 
     LoginPO loginByEmailDTOToLoginPO(LoginByEmailDTO loginByEmailDTO);
+
+    LoginPO loginByMcUuidDTOToLoginPO(LoginByMcUuidDTO loginByMcUuidDTO);
 }

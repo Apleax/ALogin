@@ -9,16 +9,9 @@ import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 
 @Slf4j
 @Configuration
-public class EncryptionConfig {
-    private final EncryptorSelector selector;
-    private final String algorithm;
-
-    public EncryptionConfig(@Inject(value = "${Security.encryption.algorithm}")
-                            String algorithm,
-                            EncryptorSelector selector) {
-        this.algorithm = algorithm;
-        this.selector = selector;
-    }
+public record EncryptionConfig(EncryptorSelector selector) {
+    @Inject(value = "${Security.encryption.algorithm}")
+    private static String algorithm;
 
     @Bean(index = -100, name = "Algorithm")
     public PasswordEncryptor passwordEncryptor() {

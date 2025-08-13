@@ -40,13 +40,16 @@ EmailConfig:
 
 # 数据库配置块
 DataBase:
-  # 可选数据库: MYSQL
+  # 可选数据库: MYSQL,SQLSERVER
   choose: MYSQL
   host: localhost
   port: 3306
-  database: qin_server
+  database: alogin
   username: root
   password: 123456
+  # 完整的JDBC连接字符串
+  # JDBC连接字符串不为空时，将忽略除 username 与 password 以外的其他数据库配置
+  jdbc: ''
 
 Security:
   encryption:

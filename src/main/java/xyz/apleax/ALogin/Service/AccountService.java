@@ -1,8 +1,10 @@
 package xyz.apleax.ALogin.Service;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
+import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Result;
 import xyz.apleax.ALogin.Entity.DTO.LoginByEmailDTO;
+import xyz.apleax.ALogin.Entity.DTO.LoginByMcUuidDTO;
 import xyz.apleax.ALogin.Entity.DTO.RegisterDTO;
 
 /**
@@ -18,7 +20,7 @@ public interface AccountService {
      * @return 注册结果
      * @author Apleax
      */
-    Result<SaTokenInfo> register(RegisterDTO registerDTO) throws Exception;
+    Result<SaTokenInfo> register(RegisterDTO registerDTO, Context context) throws Exception;
 
     /**
      * 邮箱验证码
@@ -35,4 +37,12 @@ public interface AccountService {
      * @author Apleax
      */
     Result<SaTokenInfo> loginByEmail(LoginByEmailDTO loginByEmailDTO) throws Exception;
+
+    /**
+     * 通过Minecraft UUID登录
+     *
+     * @param loginByMcUuidDTO 登录信息: Minecraft_UUID 密码
+     * @author Apleax
+     */
+    Result<SaTokenInfo> loginByMcUuid(LoginByMcUuidDTO loginByMcUuidDTO) throws Exception;
 }

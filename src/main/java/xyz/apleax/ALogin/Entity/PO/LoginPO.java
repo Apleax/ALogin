@@ -12,4 +12,5 @@ public class LoginPO {
     private String password;
     private String mc_uuid;
     private String qq_account;
+    private String last_login_ip;
 }
