@@ -27,4 +27,4 @@ nbdist/
 
 ### Mac files ###
 *.DS_Store
-/src/main/resources/ALogin/config-dev.yml
+/core/src/main/resources/ALogin/config-dev.yml
