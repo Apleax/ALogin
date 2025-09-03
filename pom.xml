@@ -13,16 +13,24 @@
 
     <groupId>xyz.apleax</groupId>
     <artifactId>ALogin</artifactId>
-    <version>0.0.7</version>
+    <version>0.1.0</version>
 
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <description>适配MC的统一单点登录中心</description>
+
+    <modules>
+        <module>web</module>
+        <module>core</module>
+    </modules>
 
     <!-- 依赖版本 -->
     <properties>
         <project.version>${project.version}</project.version>
         <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mybatis-plus.version>3.5.11</mybatis-plus.version>
         <jsqlparser.version>3.5.11</jsqlparser.version>
         <HikariCP.version>7.0.0</HikariCP.version>
@@ -36,11 +44,6 @@
     </properties>
 
     <dependencies>
-        <!-- Web核心 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-web</artifactId>
-        </dependency>
         <!-- 日志 -->
         <dependency>
             <groupId>org.noear</groupId>
@@ -52,70 +55,21 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- mybatis-plus -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-solon-plugin</artifactId>
-            <version>${mybatis-plus.version}</version>
-        </dependency>
-        <!-- SQL解析器 -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-jsqlparser</artifactId>
-            <version>${jsqlparser.version}</version>
-        </dependency>
-        <!-- 数据库连接池HikariCP -->
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>${HikariCP.version}</version>
-        </dependency>
-        <!-- MySQL驱动 -->
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <version>${MySQL-Driver.version}</version>
-        </dependency>
-        <!-- SQLServer驱动 -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>${SQLServer-Driver.version}</version>
-            <scope>compile</scope>
-        </dependency>
         <!-- banner打印 -->
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>solon-config-banner</artifactId>
         </dependency>
-        <!-- 邮箱 -->
+        <!-- 测试 -->
         <dependency>
-            <groupId>org.simplejavamail</groupId>
-            <artifactId>simple-java-mail</artifactId>
-            <version>${simple-java-mail}</version>
-        </dependency>
-        <!-- Sa-Token -->
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-solon-plugin</artifactId>
-            <version>${sa-token.version}</version>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-test-junit5</artifactId>
+            <scope>test</scope>
         </dependency>
         <!-- mapstruct-plus对象拷贝 -->
         <dependency>
             <groupId>org.dromara.solon-plugins</groupId>
             <artifactId>mapstruct-plus-solon-plugin</artifactId>
-        </dependency>
-        <!-- 缓存 -->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-            <version>${caffeine.version}</version>
-        </dependency>
-        <!-- 摘要算法 -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk18on</artifactId>
-            <version>${bcpkix.version}</version>
         </dependency>
     </dependencies>
 
@@ -126,8 +80,6 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <build>
-                <finalName>${project.artifactId}</finalName>
-
                 <resources>
                     <resource>
                         <directory>src/main/resources</directory>
@@ -147,46 +99,11 @@
                         </excludes>
                     </resource>
                 </resources>
-
-                <plugins>
-                    <plugin>
-                        <groupId>org.noear</groupId>
-                        <artifactId>solon-maven-plugin</artifactId>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.8.1</version>
-                        <configuration>
-                            <source>${java.version}</source>
-                            <target>${java.version}</target>
-                            <annotationProcessorPaths>
-                                <path>
-                                    <groupId>org.projectlombok</groupId>
-                                    <artifactId>lombok</artifactId>
-                                    <version>${lombok.version}</version>
-                                </path>
-                                <path>
-                                    <groupId>io.github.linpeilie</groupId>
-                                    <artifactId>mapstruct-plus-processor</artifactId>
-                                    <version>${mapstruct-plus.version}</version>
-                                </path>
-                            </annotationProcessorPaths>
-                            <compilerArgs>
-                                <arg>
-                                    -Amapstruct.defaultComponentModel=solon
-                                </arg>
-                            </compilerArgs>
-                        </configuration>
-                    </plugin>
-                </plugins>
             </build>
         </profile>
         <profile>
             <id>dev</id>
             <build>
-                <finalName>${project.artifactId}</finalName>
-
                 <resources>
                     <resource>
                         <directory>src/main/resources</directory>
@@ -206,42 +123,40 @@
                         </excludes>
                     </resource>
                 </resources>
-
-                <plugins>
-                    <plugin>
-                        <groupId>org.noear</groupId>
-                        <artifactId>solon-maven-plugin</artifactId>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.8.1</version>
-                        <configuration>
-                            <source>${java.version}</source>
-                            <target>${java.version}</target>
-                            <annotationProcessorPaths>
-                                <path>
-                                    <groupId>org.projectlombok</groupId>
-                                    <artifactId>lombok</artifactId>
-                                    <version>${lombok.version}</version>
-                                </path>
-                                <path>
-                                    <groupId>io.github.linpeilie</groupId>
-                                    <artifactId>mapstruct-plus-processor</artifactId>
-                                    <version>${mapstruct-plus.version}</version>
-                                </path>
-                            </annotationProcessorPaths>
-                            <compilerArgs>
-                                <arg>
-                                    -Amapstruct.defaultComponentModel=solon
-                                </arg>
-                            </compilerArgs>
-                        </configuration>
-                    </plugin>
-                </plugins>
             </build>
         </profile>
     </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>io.github.linpeilie</groupId>
+                            <artifactId>mapstruct-plus-processor</artifactId>
+                            <version>${mapstruct-plus.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>
+                            -Amapstruct.defaultComponentModel=solon
+                        </arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <repositories>
         <repository>
