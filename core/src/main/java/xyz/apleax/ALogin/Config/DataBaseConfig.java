@@ -28,6 +28,7 @@ public record DataBaseConfig() implements LifecycleBean {
 
     @Bean(name = "DataBase", typed = true, index = -100)
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
+        log.info("DataBaseConfig Loading...");
         HikariDataSource ds = new HikariDataSource();
         String choose;
         if (dbProps.jdbc() != null && !dbProps.jdbc().isEmpty())
@@ -115,16 +116,14 @@ public record DataBaseConfig() implements LifecycleBean {
             for (String resource : ResourceUtil.scanResources("classpath:SQL/" + choose + "/*")) {
                 String name = resource.substring(resource.lastIndexOf("/") + 1, resource.lastIndexOf("."));
                 boolean tableExists;
-                try (ResultSet rs = connection.getMetaData().getTables(null, null, name, new String[]{"TABLE"})) {
-                    tableExists = rs.next();
-                }
+                ResultSet rs = connection.getMetaData().getTables(null, null, name, new String[]{"TABLE"});
+                tableExists = rs.next();
                 if (tableExists) continue;
                 String sql = ResourceUtil.getResourceAsString(resource);
-                try (java.sql.Statement statement = connection.createStatement()) {
-                    statement.execute(sql);
-                }
+                java.sql.Statement statement = connection.createStatement();
+                statement.execute(sql);
+                log.info("Initialized table {}", choose);
             }
-            log.debug("Initialized table {}", choose);
         } catch (Exception e) {
             log.warn("Failed to initialize table: {}", e.getMessage(), e);
         }

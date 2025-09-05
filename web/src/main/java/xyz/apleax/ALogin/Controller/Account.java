@@ -75,4 +75,18 @@ public class Account {
         }
         return accountService.login(loginBO, loginIp, accountType);
     }
+
+    @Transaction
+    @Mapping(path = "/CheckLogin", method = MethodType.GET,
+            name = "查询登陆状态", description = "查询登录状态接口")
+    public Result<Boolean> CheckLogin() {
+        return accountService.checkLogin();
+    }
+
+    @Transaction
+    @Mapping(path = "/GetLoginInfo", method = MethodType.GET,
+            name = "获取登陆状态", description = "获取登陆状态接口")
+    public Result<SaTokenInfo> GetLoginInfo() {
+        return accountService.getLoginInfo();
+    }
 }
