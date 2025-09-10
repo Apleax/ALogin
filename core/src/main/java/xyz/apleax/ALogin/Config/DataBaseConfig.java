@@ -4,10 +4,14 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;
+import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.core.util.ResourceUtil;
+import org.noear.solon.vault.VaultUtils;
+import xyz.apleax.ALogin.Util.RandomStringUtils;
+import xyz.apleax.ALogin.Util.VaultCoderImpl;
 
 import javax.sql.DataSource;
 import java.sql.ResultSet;
@@ -19,6 +23,10 @@ import java.sql.ResultSet;
 @Configuration
 public record DataBaseConfig() implements LifecycleBean {
     private static HikariDataSource preheatedDataSource;
+    private static String vaultPassword = Solon.cfg().get("DataBase.vault.password");
+    private static final boolean vaultEnabled =
+            Solon.cfg().getBool("DataBase.vault.enabled", false) &&
+                    vaultPassword.isBlank();
 
     @Override
     public void start() {
@@ -27,6 +35,7 @@ public record DataBaseConfig() implements LifecycleBean {
     }
 
     @Bean(name = "DataBase", typed = true, index = -100)
+    @Condition(onMissingBean = DataSource.class, onBean = VaultCoderImpl.class)
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
         log.info("DataBaseConfig Loading...");
         HikariDataSource ds = new HikariDataSource();
@@ -42,6 +51,15 @@ public record DataBaseConfig() implements LifecycleBean {
         }
         String jdbcUrl = buildJdbcUrl(dbProps);
         ds.setJdbcUrl(jdbcUrl);
+        if (vaultEnabled) log.warn("""
+                        Vault password: {}
+                        Encrypt database name: {}
+                        Encrypt database username: {}
+                        Encrypt database password: {}""",
+                vaultPassword,
+                VaultUtils.encrypt(dbProps.database()),
+                VaultUtils.encrypt(dbProps.username()),
+                VaultUtils.encrypt(dbProps.password()));
         ds.setUsername(dbProps.username());
         ds.setPassword(dbProps.password());
         if ("sqlite".equals(choose)) {
@@ -60,6 +78,12 @@ public record DataBaseConfig() implements LifecycleBean {
         preheatedDataSource = ds;
         initializeTable(ds, choose);
         return ds;
+    }
+
+    @Bean(typed = true, index = -100)
+    public VaultCoderImpl vaultCoderInit() {
+        if (vaultEnabled) vaultPassword = RandomStringUtils.generateLowerUpper(16);
+        return new VaultCoderImpl(vaultPassword);
     }
 
     private String buildJdbcUrl(DatabaseProperties dbProps) {
@@ -122,7 +146,7 @@ public record DataBaseConfig() implements LifecycleBean {
                 String sql = ResourceUtil.getResourceAsString(resource);
                 java.sql.Statement statement = connection.createStatement();
                 statement.execute(sql);
-                log.info("Initialized table {}", choose);
+                log.info("Initialize {} table of {}", name, choose);
             }
         } catch (Exception e) {
             log.warn("Failed to initialize table: {}", e.getMessage(), e);
@@ -133,6 +157,7 @@ public record DataBaseConfig() implements LifecycleBean {
      * 数据库配置属性类
      */
     public record DatabaseProperties(
+            VaultProperties vault,
             String choose,
             String host,
             int port,
@@ -141,6 +166,26 @@ public record DataBaseConfig() implements LifecycleBean {
             String password,
             String jdbc,
             String path
+    ) {
+        @Override
+        public String database() {
+            return VaultUtils.guard(database);
+        }
+
+        @Override
+        public String username() {
+            return VaultUtils.guard(username);
+        }
+
+        @Override
+        public String password() {
+            return VaultUtils.guard(password);
+        }
+    }
+
+    public record VaultProperties(
+            boolean enabled,
+            String password
     ) {
     }
 }
