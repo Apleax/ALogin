@@ -88,6 +88,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                         case QQ_ACCOUNT -> queryWrapper.eq(AccountPO::getQqAccount, Type.value());
                         case MC_UUID -> queryWrapper.eq(AccountPO::getMcUuid, Type.value());
                     }
+                    if (!accountService.exists(queryWrapper)) return null;
                     return accountService.getOne(queryWrapper).getAccount();
                 });
     }
