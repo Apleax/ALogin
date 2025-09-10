@@ -20,7 +20,7 @@ import org.simplejavamail.mailer.internal.MailerRegularBuilderImpl;
 public record SimpleJavaMailConfig() implements LifecycleBean {
 
     @Override
-    public void start() throws Throwable {
+    public void start() {
         log.info("SimpleJavaMailConfig Loading Complete");
     }
 
@@ -39,6 +39,7 @@ public record SimpleJavaMailConfig() implements LifecycleBean {
 
     @Bean(index = -100)
     public Mailer SimpleJavaMailBuilder() {
+        log.info("SimpleJavaMailConfig Loading...");
         MailerRegularBuilderImpl mailerRegularBuilder = MailerBuilder
                 .withSMTPServer(HostName, Port, UserName, Password);
         switch (Port) {

@@ -16,7 +16,6 @@ public interface AccountService {
      * 注册
      *
      * @param accountBO 注册信息: 邮箱 密码 验证码
-     * @return 注册结果
      * @author Apleax
      */
     Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip) throws Exception;
@@ -36,4 +35,18 @@ public interface AccountService {
      * @author Apleax
      */
     Result<Long> registerVerifyCode(String email);
+
+    /**
+     * 查询登录状态
+     *
+     * @author Apleax
+     */
+    Result<Boolean> checkLogin();
+
+    /**
+     * 获取登录信息
+     *
+     * @author Apleax
+     */
+    Result<SaTokenInfo> getLoginInfo();
 }
