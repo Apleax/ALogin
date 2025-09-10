@@ -24,12 +24,15 @@ public record SaTokenInterceptorConfig() implements LifecycleBean {
 
     @Bean(index = -100)  //-100，是顺序位（低值优先）
     public SaTokenInterceptor saTokenInterceptor() {
+        log.info("SaToken Loading...");
         return new SaTokenInterceptor()
                 // 指定 [拦截路由] 与 [放行路由]
                 .addInclude("/**").addExclude(
                         "/api/account/Register",
                         "/api/account/Login",
-                        "/api/account/RegisterVerifyCode"
+                        "/api/account/RegisterVerifyCode",
+                        "/api/account/CheckLogin",
+                        "/api/account/GetLoginInfo"
                 )
                 // 认证函数: 每次请求执行
                 .setAuth(req -> SaRouter.match("/**", StpUtil::checkLogin))

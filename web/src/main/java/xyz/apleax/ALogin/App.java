@@ -17,22 +17,23 @@ import java.io.InputStream;
 import java.security.Security;
 import java.util.Arrays;
 
-;
-
 @Slf4j
 @SolonMain
 public class App {
     public static void main(String[] args) {
         Solon.start(App.class, args, app -> {
+            // 彩色日志适配检查
             if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
                 if (ClassUtil.hasClass(() -> AnsiConsole.class)) try {
                     AnsiConsole.systemInstall();
                 } catch (Throwable e) {
                     log.warn("Failed to initialize AnsiConsole");
                 }
+            // 跨域请求
             app.filter(-1, new CrossFilter());
             String appName = Solon.cfg().appName();
             String[] requiredResources = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
+            // 文件初始化
             handleFileInitialization(appName, requiredResources);
             Security.addProvider(new BouncyCastleProvider());
             String configPath = appName + "/config.yml";
@@ -43,7 +44,12 @@ public class App {
         });
     }
 
-    // 处理文件初始化/恢复
+    /**
+     * 处理文件初始化/恢复
+     *
+     * @param appName           应用名称
+     * @param requiredResources 必需的资源文件类路径列表
+     */
     private static void handleFileInitialization(String appName, String[] requiredResources) {
         if (requiredResources.length == 0) {
             log.warn("No resource files found for initialization");
@@ -60,14 +66,23 @@ public class App {
         } else checkAndRecoverMissingFiles(requiredResources);
     }
 
-    // 复制所有配置文件
+    /**
+     * 复制所有配置文件
+     *
+     * @param resourcePaths 必需的资源文件类路径列表
+     * @return 是否初始化成功
+     */
     private static boolean copyAllConfigFiles(String[] resourcePaths) {
         if (resourcePaths.length == 0) return false;
         for (String resourcePath : resourcePaths) if (recoverSingleFile(resourcePath)) return false;
         return true;
     }
 
-    // 检查并恢复缺失的文件
+    /**
+     * 检查并恢复缺失的文件
+     *
+     * @param resourcePaths 必需的资源文件类路径列表
+     */
     private static void checkAndRecoverMissingFiles(String[] resourcePaths) {
         boolean hasMissingFiles = false;
         for (String resourcePath : resourcePaths) {
@@ -81,7 +96,12 @@ public class App {
         if (hasMissingFiles) log.debug("Recovered all missing configuration files");
     }
 
-    // 恢复单个文件
+    /**
+     * 恢复单个文件
+     *
+     * @param resourcePath 必需的资源文件类路径
+     * @return 是否恢复成功
+     */
     private static boolean recoverSingleFile(String resourcePath) {
         File targetFile = new File(ResourceUtil.findResource("file:").getPath().substring(1) + resourcePath);
         File parentDir = targetFile.getParentFile();
@@ -98,7 +118,12 @@ public class App {
         }
     }
 
-    // 创建目录（如果不存在）
+    /**
+     * 创建目录（如果不存在）
+     *
+     * @param directory 目录
+     * @return 是否创建成功<br><code>true</code>为失败，<code>false</code>为成功
+     */
     private static boolean createDirectoryIfNotExists(File directory) {
         if (directory != null && !directory.exists()) if (!directory.mkdirs()) {
             log.error("Failed to create directory: {}", directory.getAbsolutePath());
@@ -107,7 +132,12 @@ public class App {
         return false;
     }
 
-    // 创建所有必需的目录
+    /**
+     * 创建所有必需的目录
+     *
+     * @param resourcePaths 必需的资源文件类路径列表
+     * @return 是否创建成功
+     */
     private static boolean createDirectories(String[] resourcePaths) {
         String[] dirPaths = Arrays.stream(resourcePaths)
                 .map(s -> s.substring(0, s.lastIndexOf("/")))

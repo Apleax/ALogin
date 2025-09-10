@@ -147,4 +147,15 @@ public class AccountServiceImpl implements AccountService {
         EmailVerifyCodeUtil.sendAsync(email, VCode);
         return Result.succeed();
     }
+
+    @Override
+    public Result<Boolean> checkLogin() {
+        if (StpUtil.isLogin()) return Result.succeed(true);
+        return Result.succeed(false);
+    }
+
+    @Override
+    public Result<SaTokenInfo> getLoginInfo() {
+        return Result.succeed(StpUtil.getTokenInfo());
+    }
 }

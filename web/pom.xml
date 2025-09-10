@@ -27,7 +27,7 @@
         <!-- Http 启动器 -->
         <dependency>
             <groupId>org.noear</groupId>
-            <artifactId>solon-boot-smarthttp</artifactId>
+            <artifactId>solon-server-vertx</artifactId>
         </dependency>
         <!-- Json序列化支持插件 -->
         <dependency>
