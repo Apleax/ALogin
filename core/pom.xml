@@ -68,6 +68,11 @@
             <artifactId>bcpkix-jdk18on</artifactId>
             <version>${bcpkix.version}</version>
         </dependency>
+        <!-- 数据脱敏 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-security-vault</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
