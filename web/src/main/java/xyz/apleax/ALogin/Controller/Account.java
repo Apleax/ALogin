@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin.Controller;
 
+import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Controller;
@@ -38,6 +39,7 @@ public class Account {
         this.accountService = accountService;
     }
 
+    @SaIgnore
     @Transaction
     @Mapping(path = "/Register", method = MethodType.POST,
             name = "注册", description = "注册接口，用于注册一个账号")
@@ -47,6 +49,7 @@ public class Account {
         return accountService.register(accountBO, verify_code, context.realIp());
     }
 
+    @SaIgnore
     @Transaction
     @Mapping(path = "/RegisterVerifyCode", method = MethodType.POST,
             name = "注册验证码", description = "获取一个用于注册的验证码发送到请求的邮箱")
@@ -56,6 +59,7 @@ public class Account {
         return accountService.registerVerifyCode(email);
     }
 
+    @SaIgnore
     @Transaction
     @Mapping(path = "/Login", method = MethodType.POST,
             name = "登录", description = "登录接口，用于登录账号")
@@ -76,6 +80,7 @@ public class Account {
         return accountService.login(loginBO, loginIp, accountType);
     }
 
+    @SaIgnore
     @Transaction
     @Mapping(path = "/CheckLogin", method = MethodType.GET,
             name = "查询登陆状态", description = "查询登录状态接口")
@@ -83,10 +88,19 @@ public class Account {
         return accountService.checkLogin();
     }
 
+    @SaIgnore
     @Transaction
     @Mapping(path = "/GetLoginInfo", method = MethodType.GET,
             name = "获取登陆状态", description = "获取登陆状态接口")
     public Result<SaTokenInfo> GetLoginInfo() {
         return accountService.getLoginInfo();
+    }
+
+    @SaIgnore
+    @Transaction
+    @Mapping(path = "/Logout", method = MethodType.GET,
+            name = "登出", description = "登出接口")
+    public Result<SaTokenInfo> Logout() {
+        return accountService.logout();
     }
 }

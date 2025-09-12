@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin;
 
+import cn.dev33.satoken.exception.NotLoginException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,8 @@ public class AppFitter implements Filter {
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
         try {
             chain.doFilter(ctx);
+        } catch (NotLoginException e) {
+            ctx.render(Result.failure("Not login"));
         } catch (ValidatorException e) {
             ctx.render(e.getResult());
         } catch (ConstructionException |
@@ -31,7 +34,7 @@ public class AppFitter implements Filter {
             ctx.render(Result.failure("Invalid parameter"));
         } catch (Exception e) {
             ctx.render(Result.failure("Server error"));
-            log.error("", e);
+            log.error(e.getLocalizedMessage());
         }
     }
 }

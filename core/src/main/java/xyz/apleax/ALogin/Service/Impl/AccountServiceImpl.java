@@ -158,4 +158,10 @@ public class AccountServiceImpl implements AccountService {
     public Result<SaTokenInfo> getLoginInfo() {
         return Result.succeed(StpUtil.getTokenInfo());
     }
+
+    @Override
+    public Result<SaTokenInfo> logout() {
+        StpUtil.logout();
+        return Result.succeed();
+    }
 }
