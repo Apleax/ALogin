@@ -18,10 +18,7 @@ import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Service.AccountService;
-import xyz.apleax.ALogin.VO.LoginByEmailVO;
-import xyz.apleax.ALogin.VO.LoginByMcUuidVO;
-import xyz.apleax.ALogin.VO.LoginVO;
-import xyz.apleax.ALogin.VO.RegisterVO;
+import xyz.apleax.ALogin.VO.*;
 
 /**
  * 账号Controller
@@ -77,20 +74,26 @@ public class Account {
             accountType = AccountType.MC_UUID;
             loginIp = loginByMcUuidVO.getLogin_ip();
         }
+        if (loginVO instanceof LoginByAccountVO loginByAccountVO) {
+            loginBO = VOtoBOConvert.INSTANCE.loginByAccountVOToLoginBO(loginByAccountVO);
+            accountType = AccountType.ACCOUNT;
+            loginIp = Context.current().realIp();
+        }
         return accountService.login(loginBO, loginIp, accountType);
     }
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/CheckLogin", method = MethodType.GET,
+    @Mapping(path = "/CheckLogin", method = {MethodType.GET, MethodType.POST},
             name = "查询登陆状态", description = "查询登录状态接口")
-    public Result<Boolean> CheckLogin() {
-        return accountService.checkLogin();
+    public Result<Boolean> CheckLogin(String mc_uuid, String ip, Context context) {
+        if (ip == null) ip = context.realIp();
+        return accountService.checkLogin(ip, mc_uuid);
     }
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/GetLoginInfo", method = MethodType.GET,
+    @Mapping(path = "/GetLoginInfo", method = {MethodType.GET, MethodType.POST},
             name = "获取登陆状态", description = "获取登陆状态接口")
     public Result<SaTokenInfo> GetLoginInfo() {
         return accountService.getLoginInfo();
@@ -98,7 +101,7 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Logout", method = MethodType.GET,
+    @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")
     public Result<SaTokenInfo> Logout() {
         return accountService.logout();
