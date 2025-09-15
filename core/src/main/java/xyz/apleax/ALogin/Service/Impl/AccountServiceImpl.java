@@ -108,10 +108,10 @@ public class AccountServiceImpl implements AccountService {
         String accountId = getAccountId(loginBO, accountType);
         AccountPO accountPO = null;
         if (accountId != null) accountPO = accountCache.get(accountId);
-        if (accountPO == null) return Result.failure("邮箱或密码错误");
+        if (accountPO == null) return Result.failure(accountType.getValue() + "或密码错误");
         if (!StpUtil.isLogin()) {
             String password = encryptor.encrypt(loginBO.getPassword(), accountPO.getSalt());
-            if (!accountPO.getPassword().equals(password)) return Result.failure("邮箱或密码错误");
+            if (!accountPO.getPassword().equals(password)) return Result.failure(accountType.getValue() + "或密码错误");
             StpUtil.login(accountPO.getAccount(), accountType.getKey());
             boolean updated = accountService.update((new LambdaUpdateWrapper<AccountPO>()
                     .set(AccountPO::getLastLoginIp, loginIp)
@@ -149,8 +149,18 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Result<Boolean> checkLogin() {
+    public Result<Boolean> checkLogin(String ip, String mc_uuid) {
         if (StpUtil.isLogin()) return Result.succeed(true);
+        if (mc_uuid != null) {
+            String account = accountIndexCache.get(new AccountIndexCache(AccountType.MC_UUID, mc_uuid));
+            if (account == null) return Result.succeed(false);
+            AccountPO accountPO = accountCache.get(account);
+            if (accountPO == null) return Result.succeed(false);
+            if (accountPO.getLastLoginIp().equals(ip)) {
+                StpUtil.login(accountPO.getAccount(), AccountType.MC_UUID.getKey());
+                return Result.succeed(true);
+            }
+        }
         return Result.succeed(false);
     }
 

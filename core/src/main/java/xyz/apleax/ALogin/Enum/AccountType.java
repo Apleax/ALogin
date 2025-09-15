@@ -9,14 +9,16 @@ import lombok.Getter;
  */
 @Getter
 public enum AccountType {
-    ACCOUNT("account"),
-    EMAIL("email"),
-    QQ_ACCOUNT("qq_account"),
-    MC_UUID("mc_uuid");
+    ACCOUNT("account", "账号"),
+    EMAIL("email", "邮箱"),
+    QQ_ACCOUNT("qq_account", "QQ号"),
+    MC_UUID("mc_uuid", "MCUUID");
     private final String key;
+    private final String value;
 
-    AccountType(String key) {
+    AccountType(String key, String value) {
         this.key = key;
+        this.value = value;
     }
 
     public static AccountType getValueByKey(String key) {

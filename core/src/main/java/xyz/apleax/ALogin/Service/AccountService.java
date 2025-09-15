@@ -41,7 +41,7 @@ public interface AccountService {
      *
      * @author Apleax
      */
-    Result<Boolean> checkLogin();
+    Result<Boolean> checkLogin(String ip, String mc_uuid);
 
     /**
      * 获取登录信息
