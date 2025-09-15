@@ -49,4 +49,11 @@ public interface AccountService {
      * @author Apleax
      */
     Result<SaTokenInfo> getLoginInfo();
+
+    /**
+     * 登出
+     *
+     * @author Apleax
+     */
+    Result<SaTokenInfo> logout();
 }
