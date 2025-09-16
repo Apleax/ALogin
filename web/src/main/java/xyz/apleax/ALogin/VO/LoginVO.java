@@ -8,8 +8,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonSubTypes({
         @JsonSubTypes.Type(value = LoginByEmailVO.class, name = "Email"),
-        @JsonSubTypes.Type(value = LoginByMcUuidVO.class, name = "McUuid")
-        , @JsonSubTypes.Type(value = LoginByAccountVO.class, name = "Account")
+        @JsonSubTypes.Type(value = LoginByMcUuidVO.class, name = "McUuid"),
+        @JsonSubTypes.Type(value = LoginByAccountVO.class, name = "Account")
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface LoginVO {

@@ -9,13 +9,12 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.MethodType;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Transaction;
-import org.noear.solon.validation.annotation.Email;
-import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
+import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Service.AccountService;
 import xyz.apleax.ALogin.VO.*;
@@ -48,12 +47,15 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/RegisterVerifyCode", method = MethodType.POST,
-            name = "注册验证码", description = "获取一个用于注册的验证码发送到请求的邮箱")
-    public Result<Long> VerifyCode(@Validated
-                                   @NotBlank(message = "邮箱不能为空")
-                                   @Email(message = "邮箱格式错误") String email) {
-        return accountService.registerVerifyCode(email);
+    @Mapping(path = "/VerifyCode", method = MethodType.POST,
+            name = "验证码", description = "获取一个验证码发送到请求的邮箱")
+    public Result<Long> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
+        VerifyCodeKey verifyCodeKey = null;
+        if (verifyCodeVO instanceof RegisterVerifyCodeVO registerVerifyCodeVO)
+            verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), registerVerifyCodeVO.getType());
+        if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO)
+            verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), resetPasswordVerifyCodeVO.getType());
+        return accountService.verifyCode(verifyCodeKey);
     }
 
     @SaIgnore
@@ -105,5 +107,15 @@ public class Account {
             name = "登出", description = "登出接口")
     public Result<SaTokenInfo> Logout() {
         return accountService.logout();
+    }
+
+    @SaIgnore
+    @Transaction
+    @Mapping(path = "/ResetPassword", method = MethodType.POST,
+            name = "重置密码", description = "重置密码接口")
+    public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) throws Exception {
+        return accountService.resetPassword(resetPasswordVO.getEmail(),
+                resetPasswordVO.getVerify_code(),
+                resetPasswordVO.getNew_password());
     }
 }
