@@ -135,16 +135,16 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transaction
-    public Result<Long> registerVerifyCode(String email) {
-        VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(new VerifyCodeKey(email, VerifyCodeType.REGISTER));
-        if (verifyCodePOJO == null) return Result.failure(Result.FAILURE_CODE, "该邮箱已注册");
+    public Result<Long> verifyCode(VerifyCodeKey verifyCodeKey) {
+        VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(verifyCodeKey);
+        if (verifyCodePOJO == null) return Result.failure();
         if (verifyCodePOJO.getTime() != null) {
             long remainderTime = (System.currentTimeMillis() / 1000 - verifyCodePOJO.getTime());
             if (remainderTime < 60) return Result.failure(Result.FAILURE_CODE, "获取失败", 60 - remainderTime);
         }
         verifyCodePOJO.setTime(System.currentTimeMillis() / 1000);
         String VCode = verifyCodePOJO.getVerifyCode();
-        EmailVerifyCodeUtil.sendAsync(email, VCode);
+        EmailVerifyCodeUtil.sendAsync(verifyCodeKey.email(), VCode);
         return Result.succeed();
     }
 
@@ -173,5 +173,22 @@ public class AccountServiceImpl implements AccountService {
     public Result<SaTokenInfo> logout() {
         StpUtil.logout();
         return Result.succeed();
+    }
+
+    @Override
+    public Result<Boolean> resetPassword(String email, String verify_code, String new_password) throws Exception {
+        if (checkVerifyCode(new VerifyCodeKey(email, VerifyCodeType.RESET_PASSWORD), verify_code))
+            return Result.failure("验证码错误");
+        String salt = RandomStringUtils.generateLowerUpper(32);
+        String password = encryptor.encrypt(new_password, salt);
+        boolean updated = accountService.update((new LambdaUpdateWrapper<AccountPO>()
+                .set(AccountPO::getPassword, password)
+                .set(AccountPO::getSalt, salt)
+                .eq(AccountPO::getEmail, email)));
+        if (updated) {
+            String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, email));
+            if (account != null) accountCache.invalidate(account);
+        } else log.warn("Failed to update password for email: {}", email);
+        return Result.succeed(true);
     }
 }

@@ -47,11 +47,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                 .initialCapacity(100)
                 .expireAfterWrite(Duration.ofMinutes(30))
                 .recordStats()
-                .build(k -> {
-                    if (accountService.count(new LambdaQueryWrapper<AccountPO>()
-                            .eq(AccountPO::getEmail, k.email())) > 0) return null;
-                    return new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null);
-                });
+                .build(k -> new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null));
     }
 
     // 账号缓存
