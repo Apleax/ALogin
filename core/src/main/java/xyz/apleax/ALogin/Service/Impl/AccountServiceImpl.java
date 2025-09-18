@@ -189,6 +189,7 @@ public class AccountServiceImpl implements AccountService {
             String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, email));
             if (account != null) accountCache.invalidate(account);
         } else log.warn("Failed to update password for email: {}", email);
+        StpUtil.logout();
         return Result.succeed(true);
     }
 }
