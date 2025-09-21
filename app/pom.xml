@@ -10,7 +10,7 @@
     </parent>
 
     <groupId>xyz.apleax.ALogin</groupId>
-    <artifactId>web</artifactId>
+    <artifactId>app</artifactId>
 
     <dependencies>
         <!-- ALogin引入核心包 -->
