@@ -7,13 +7,13 @@
     <parent>
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
-        <version>3.5.1</version>
+        <version>3.6.2</version>
         <relativePath/>
     </parent>
 
     <groupId>xyz.apleax</groupId>
     <artifactId>ALogin</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
 
     <packaging>pom</packaging>
 
@@ -22,15 +22,15 @@
     <modules>
         <module>app</module>
         <module>core</module>
+        <module>server</module>
     </modules>
 
     <!-- 依赖版本 -->
     <properties>
         <project.version>${project.version}</project.version>
-        <java.version>21</java.version>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         <mybatis-plus.version>3.5.11</mybatis-plus.version>
         <jsqlparser.version>3.5.11</jsqlparser.version>
         <HikariCP.version>7.0.0</HikariCP.version>
@@ -41,6 +41,7 @@
         <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
         <caffeine.version>3.2.2</caffeine.version>
         <bcpkix.version>1.81</bcpkix.version>
+        <minestom.version>2025.10.31-1.21.10</minestom.version>
     </properties>
 
     <dependencies>
@@ -132,7 +133,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.14.1</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>

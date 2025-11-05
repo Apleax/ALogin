@@ -93,7 +93,6 @@ public class Account {
         return accountService.checkLogin(ip, mc_uuid);
     }
 
-    @SaIgnore
     @Transaction
     @Mapping(path = "/GetLoginInfo", method = {MethodType.GET, MethodType.POST},
             name = "获取登陆状态", description = "获取登陆状态接口")
@@ -101,7 +100,6 @@ public class Account {
         return accountService.getLoginInfo();
     }
 
-    @SaIgnore
     @Transaction
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")

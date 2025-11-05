@@ -2,8 +2,8 @@ package xyz.apleax.ALogin.Util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
-import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.util.ResourceUtil;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.email.EmailBuilder;
@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  * @author Apleax
  */
 @Slf4j
-@Component
+@Managed
 public final class EmailVerifyCodeUtil {
     // 邮件工具
     @Inject
@@ -38,7 +38,7 @@ public final class EmailVerifyCodeUtil {
     private static String Server;
 
     /**
-     * 构建邮件
+     * 构建邮件发送
      *
      * @param email      收件人邮箱
      * @param verifyCode 验证码
@@ -59,7 +59,7 @@ public final class EmailVerifyCodeUtil {
                             .withHTMLText(VCodeHTML)
                             .buildEmail()
                     , true);
-            resultFuture.whenComplete((result, throwable) -> {
+            resultFuture.whenComplete((_, throwable) -> {
                 if (throwable != null) log.warn("邮件发送失败，收件人: {}，原因: {}", email, throwable.getMessage());
                 else log.debug("邮件发送成功，收件人: {}", email);
             });

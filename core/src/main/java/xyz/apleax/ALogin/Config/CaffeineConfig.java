@@ -6,8 +6,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
@@ -39,7 +39,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
     }
 
     //验证码缓存
-    @Bean(name = "VerifyCode", index = -100)
+    @Managed(name = "VerifyCode", index = -100)
     public LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> VerifyCode() {
         return Caffeine.newBuilder()
                 .removalListener(CaffeineConfig::onRemoval)
@@ -47,11 +47,11 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                 .initialCapacity(100)
                 .expireAfterWrite(Duration.ofMinutes(30))
                 .recordStats()
-                .build(k -> new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null));
+                .build(_ -> new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null));
     }
 
     // 账号缓存
-    @Bean(name = "AccountCache", index = -100)
+    @Managed(name = "AccountCache", index = -100)
     public LoadingCache<@NotNull String, AccountPO> AccountCache() {
         return Caffeine.newBuilder()
                 .removalListener(CaffeineConfig::onRemoval)
@@ -65,7 +65,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
     }
 
     // 账号索引缓存
-    @Bean(name = "AccountIndexCache", index = -100)
+    @Managed(name = "AccountIndexCache", index = -100)
     public LoadingCache<@NotNull AccountIndexCache, String> AccountIndexCache() {
         return Caffeine.newBuilder()
                 .removalListener(CaffeineConfig::onRemoval)

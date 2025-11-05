@@ -7,8 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
@@ -16,6 +16,7 @@ import xyz.apleax.ALogin.ConvertMapper.BOtoPOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.Entity.POJO.PermissionNode;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.Enum.AccountType;
@@ -27,11 +28,14 @@ import xyz.apleax.ALogin.Util.EmailVerifyCodeUtil;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+
 /**
  * @author Apleax
  */
 @Slf4j
-@Component
+@Managed
 public class AccountServiceImpl implements AccountService {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
@@ -98,7 +102,9 @@ public class AccountServiceImpl implements AccountService {
         accountBO.setPassword(password);
         accountBO.setSalt(salt);
         accountBO.setAlgorithm(encryptor.algorithmName());
-        accountBO.setMcUuid("NULL");
+        accountBO.setMcUuid(UUID.nameUUIDFromBytes(("Account:" + accountBO.getAccount())
+                .getBytes(StandardCharsets.UTF_8)).toString());
+        accountBO.setPermission(PermissionNode.DEFAULT_NODE);
         return accountBO;
     }
 

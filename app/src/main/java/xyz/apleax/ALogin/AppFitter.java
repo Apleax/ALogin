@@ -1,10 +1,11 @@
 package xyz.apleax.ALogin;
 
 import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.exception.ConstructionException;
 import org.noear.solon.core.exception.StatusException;
 import org.noear.solon.core.handle.Context;
@@ -17,7 +18,7 @@ import org.noear.solon.validation.ValidatorException;
  * @author Apleax
  */
 @Slf4j
-@Component
+@Managed
 public class AppFitter implements Filter {
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
@@ -25,6 +26,8 @@ public class AppFitter implements Filter {
             chain.doFilter(ctx);
         } catch (NotLoginException e) {
             ctx.render(Result.failure("Not login"));
+        } catch (NotPermissionException e) {
+            ctx.render(Result.failure("Not permission"));
         } catch (ValidatorException e) {
             ctx.render(e.getResult());
         } catch (ConstructionException |

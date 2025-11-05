@@ -7,7 +7,6 @@ import lombok.Data;
  */
 @Data
 public class AccountBO {
-    private Long id;
     private String account;
     private String algorithm;
     private String avatar;
@@ -21,4 +20,5 @@ public class AccountBO {
     private Long registrationTime;
     private String salt;
     private String lastLoginIp;
+    private String permission;
 }

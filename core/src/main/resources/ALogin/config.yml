@@ -4,6 +4,8 @@ ServerName: QinServer
 # 服务端口
 server.port: 8080
 
+cross.allow-origin: "*"
+
 solon.logging:
   appender:
     # 控制台日志输出级别
@@ -42,7 +44,7 @@ EmailConfig:
 DataBase:
   # 填写数据库用户名密码后开启，密钥留空生成密钥和脱敏数据
   vault:
-    enabled: true
+    enabled: false
     password: ""
   # 可选数据库: MYSQL,SQLSERVER
   choose: MYSQL

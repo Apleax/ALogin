@@ -1,6 +1,7 @@
 package xyz.apleax.ALogin.ConvertMapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 import org.mapstruct.factory.Mappers;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
@@ -12,7 +13,7 @@ import xyz.apleax.ALogin.VO.RegisterVO;
 /**
  * @author Apleax
  */
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface VOtoBOConvert {
     VOtoBOConvert INSTANCE = Mappers.getMapper(VOtoBOConvert.class);
 

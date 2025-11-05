@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin;
 
+
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.fusesource.jansi.AnsiConsole;
@@ -16,11 +17,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.Security;
 import java.util.Arrays;
+import java.util.Objects;
 
 @Slf4j
 @SolonMain
 public class App {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Solon.start(App.class, args, app -> {
             // 彩色日志适配检查
             if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
@@ -29,8 +31,6 @@ public class App {
                 } catch (Throwable e) {
                     log.warn("Failed to initialize AnsiConsole");
                 }
-            // 跨域请求
-            app.filter(-1, new CrossFilter());
             String appName = Solon.cfg().appName();
             String[] requiredResources = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
             // 文件初始化
@@ -40,6 +40,7 @@ public class App {
             if (Solon.cfg().env() != null &&
                     !Solon.cfg().env().isEmpty()) configPath = appName + "/config-" + Solon.cfg().env() + ".yml";
             Solon.cfg().loadAdd(configPath);
+            Solon.app().filter(-1, new CrossFilter().allowedOrigins(Solon.cfg().get("cross.allow-origin")));
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }
@@ -62,7 +63,10 @@ public class App {
                 log.error("Initialization failed");
                 Solon.stopBlock();
             }
-            log.info("ConfigFile Initialization completed");
+            if (!Objects.equals(Solon.cfg().env(), "dev")) {
+                log.info("ConfigFile Initialization completed, Please restart after configuration");
+                Solon.stop();
+            }
         } else checkAndRecoverMissingFiles(requiredResources);
     }
 
@@ -93,7 +97,10 @@ public class App {
                 if (recoverSingleFile(resourcePath)) log.error("Failed to recover file: {}", resourcePath);
             }
         }
-        if (hasMissingFiles) log.debug("Recovered all missing configuration files");
+        if (hasMissingFiles) if (!Objects.equals(Solon.cfg().env(), "dev")) {
+            log.debug("Recovered all missing configuration files, Please reconfigure it before starting");
+            Solon.stop();
+        }
     }
 
     /**
