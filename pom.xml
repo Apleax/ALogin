@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
-        <version>3.6.2</version>
+        <version>3.7.1</version>
         <relativePath/>
     </parent>
 
@@ -71,6 +71,18 @@
         <dependency>
             <groupId>org.dromara.solon-plugins</groupId>
             <artifactId>mapstruct-plus-solon-plugin</artifactId>
+        </dependency>
+        <!-- 多模块通信 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>dami2-solon-plugin</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+        <!-- Sa-Token -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-solon-plugin</artifactId>
+            <version>${sa-token.version}</version>
         </dependency>
     </dependencies>
 
@@ -149,11 +161,6 @@
                             <version>${mapstruct-plus.version}</version>
                         </path>
                     </annotationProcessorPaths>
-                    <compilerArgs>
-                        <arg>
-                            -Amapstruct.defaultComponentModel=solon
-                        </arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>

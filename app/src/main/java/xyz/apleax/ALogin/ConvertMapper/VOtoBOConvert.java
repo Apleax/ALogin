@@ -7,7 +7,6 @@ import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.VO.LoginByAccountVO;
 import xyz.apleax.ALogin.VO.LoginByEmailVO;
-import xyz.apleax.ALogin.VO.LoginByMcUuidVO;
 import xyz.apleax.ALogin.VO.RegisterVO;
 
 /**
@@ -20,8 +19,6 @@ public interface VOtoBOConvert {
     AccountBO registerVOToAccountBO(RegisterVO registerVO);
 
     LoginBO loginByEmailVOToLoginBO(LoginByEmailVO loginByEmailVO);
-
-    LoginBO loginByMcUuidVOToLoginBO(LoginByMcUuidVO loginByMcUuidVO);
 
     LoginBO loginByAccountVOToLoginBO(LoginByAccountVO loginByAccountVO);
 }

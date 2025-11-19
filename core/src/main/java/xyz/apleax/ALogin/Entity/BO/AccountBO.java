@@ -2,6 +2,8 @@ package xyz.apleax.ALogin.Entity.BO;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @author Apleax
  */
@@ -10,7 +12,6 @@ public class AccountBO {
     private String account;
     private String algorithm;
     private String avatar;
-    private Long bindMcAccountTime;
     private Long bindQqAccountTime;
     private String email;
     private String mcUuid;
@@ -20,5 +21,5 @@ public class AccountBO {
     private Long registrationTime;
     private String salt;
     private String lastLoginIp;
-    private String permission;
+    private List<String> permission;
 }

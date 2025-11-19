@@ -9,7 +9,7 @@ import org.noear.solon.annotation.SolonMain;
 import org.noear.solon.core.util.ClassUtil;
 import org.noear.solon.core.util.JavaUtil;
 import org.noear.solon.core.util.ResourceUtil;
-import org.noear.solon.web.cors.CrossFilter;
+import org.noear.solon.web.cors.annotation.CrossOrigin;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,9 +21,10 @@ import java.util.Objects;
 
 @Slf4j
 @SolonMain
+@CrossOrigin(origins = "${cross.allow-origin}")
 public class App {
     static void main(String[] args) {
-        Solon.start(App.class, args, app -> {
+        Solon.start(App.class, args, _ -> {
             // 彩色日志适配检查
             if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
                 if (ClassUtil.hasClass(() -> AnsiConsole.class)) try {
@@ -40,7 +41,6 @@ public class App {
             if (Solon.cfg().env() != null &&
                     !Solon.cfg().env().isEmpty()) configPath = appName + "/config-" + Solon.cfg().env() + ".yml";
             Solon.cfg().loadAdd(configPath);
-            Solon.app().filter(-1, new CrossFilter().allowedOrigins(Solon.cfg().get("cross.allow-origin")));
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }

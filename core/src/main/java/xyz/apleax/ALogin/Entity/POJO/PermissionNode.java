@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,7 +20,7 @@ import java.util.Map;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PermissionNode {
 
-    public static final String DEFAULT_NODE = "default";
+    public static final List<String> DEFAULT_NODE = List.of("default");
 
     private String value;
     private Map<String, PermissionNode> children;

@@ -5,7 +5,6 @@ import org.noear.solon.core.handle.Result;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Enum.AccountType;
 
 /**
  * 账号Service
@@ -26,12 +25,10 @@ public interface AccountService {
     /**
      * 登录
      *
-     * @param loginBO     登录信息
-     * @param loginIp     登录ip
-     * @param accountType 本次登录方式
+     * @param loginBO 登录信息
      * @author Apleax
      */
-    Result<SaTokenInfo> login(LoginBO loginBO, String loginIp, AccountType accountType) throws Exception;
+    Result<SaTokenInfo> login(LoginBO loginBO, String token) throws Exception;
 
     /**
      * 邮箱验证码
@@ -40,15 +37,6 @@ public interface AccountService {
      * @author Apleax
      */
     Result<Long> verifyCode(VerifyCodeKey verifyCodeKey);
-
-    /**
-     * 查询登录状态
-     *
-     * @param ip      本次登录ip
-     * @param mc_uuid 玩家mc_uuid
-     * @author Apleax
-     */
-    Result<Boolean> checkLogin(String ip, String mc_uuid);
 
     /**
      * 获取登录信息

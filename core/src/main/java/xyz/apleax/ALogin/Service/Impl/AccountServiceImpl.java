@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.noear.dami2.Dami;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
@@ -16,7 +17,6 @@ import xyz.apleax.ALogin.ConvertMapper.BOtoPOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
-import xyz.apleax.ALogin.Entity.POJO.PermissionNode;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.Enum.AccountType;
@@ -29,6 +29,7 @@ import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -104,28 +105,29 @@ public class AccountServiceImpl implements AccountService {
         accountBO.setAlgorithm(encryptor.algorithmName());
         accountBO.setMcUuid(UUID.nameUUIDFromBytes(("Account:" + accountBO.getAccount())
                 .getBytes(StandardCharsets.UTF_8)).toString());
-        accountBO.setPermission(PermissionNode.DEFAULT_NODE);
         return accountBO;
     }
 
     @Override
     @Transaction
-    public Result<SaTokenInfo> login(LoginBO loginBO, String loginIp, AccountType accountType) throws Exception {
-        String accountId = getAccountId(loginBO, accountType);
+    public Result<SaTokenInfo> login(LoginBO loginBO, String token) throws Exception {
+        AccountType accountType = loginBO.getAccount_type();
+        String account = getAccountId(loginBO, accountType);
         AccountPO accountPO = null;
-        if (accountId != null) accountPO = accountCache.get(accountId);
+        if (account != null) accountPO = accountCache.get(account);
         if (accountPO == null) return Result.failure(accountType.getValue() + "或密码错误");
         if (!StpUtil.isLogin()) {
             String password = encryptor.encrypt(loginBO.getPassword(), accountPO.getSalt());
             if (!accountPO.getPassword().equals(password)) return Result.failure(accountType.getValue() + "或密码错误");
             StpUtil.login(accountPO.getAccount(), accountType.getKey());
             boolean updated = accountService.update((new LambdaUpdateWrapper<AccountPO>()
-                    .set(AccountPO::getLastLoginIp, loginIp)
+                    .set(AccountPO::getLastLoginIp, loginBO.getReal_ip())
                     .eq(AccountPO::getAccount, accountPO.getAccount())));
             if (updated) accountCache.put(accountPO.getAccount(), accountPO);
             else log.warn("Failed to update last login time for account: {}", accountPO.getAccount());
         }
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        if (token != null) Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
         return Result.succeed(tokenInfo);
     }
 
@@ -135,13 +137,20 @@ public class AccountServiceImpl implements AccountService {
             case ACCOUNT -> accountIndexCache.get(new AccountIndexCache(AccountType.ACCOUNT, loginPO.getAccount()));
             case QQ_ACCOUNT ->
                     accountIndexCache.get(new AccountIndexCache(AccountType.QQ_ACCOUNT, loginPO.getQq_account()));
-            case MC_UUID -> accountIndexCache.get(new AccountIndexCache(AccountType.MC_UUID, loginPO.getMc_uuid()));
         };
     }
 
     @Override
     @Transaction
     public Result<Long> verifyCode(VerifyCodeKey verifyCodeKey) {
+        if (verifyCodeKey.type() == VerifyCodeType.RESET_PASSWORD) {
+            LoginBO loginBO = new LoginBO();
+            loginBO.setEmail(verifyCodeKey.email());
+            String accountId = getAccountId(loginBO, AccountType.EMAIL);
+            AccountPO accountPO = null;
+            if (accountId != null) accountPO = accountCache.get(accountId);
+            if (accountPO == null) return Result.failure("账号不存在");
+        }
         VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(verifyCodeKey);
         if (verifyCodePOJO == null) return Result.failure();
         if (verifyCodePOJO.getTime() != null) {
@@ -152,22 +161,6 @@ public class AccountServiceImpl implements AccountService {
         String VCode = verifyCodePOJO.getVerifyCode();
         EmailVerifyCodeUtil.sendAsync(verifyCodeKey.email(), VCode);
         return Result.succeed();
-    }
-
-    @Override
-    public Result<Boolean> checkLogin(String ip, String mc_uuid) {
-        if (StpUtil.isLogin()) return Result.succeed(true);
-        if (mc_uuid != null) {
-            String account = accountIndexCache.get(new AccountIndexCache(AccountType.MC_UUID, mc_uuid));
-            if (account == null) return Result.succeed(false);
-            AccountPO accountPO = accountCache.get(account);
-            if (accountPO == null) return Result.succeed(false);
-            if (accountPO.getLastLoginIp().equals(ip)) {
-                StpUtil.login(accountPO.getAccount(), AccountType.MC_UUID.getKey());
-                return Result.succeed(true);
-            }
-        }
-        return Result.succeed(false);
     }
 
     @Override

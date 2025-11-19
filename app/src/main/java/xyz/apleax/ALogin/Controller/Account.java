@@ -60,37 +60,20 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Login", method = MethodType.POST,
+    @Mapping(path = "/Login/?{token}?", method = MethodType.POST,
             name = "登录", description = "登录接口，用于登录账号")
-    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO) throws Exception {
+    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, String token) throws Exception {
         LoginBO loginBO = null;
-        AccountType accountType = null;
-        String loginIp = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
-            accountType = AccountType.EMAIL;
-            loginIp = Context.current().realIp();
-        }
-        if (loginVO instanceof LoginByMcUuidVO loginByMcUuidVO) {
-            loginBO = VOtoBOConvert.INSTANCE.loginByMcUuidVOToLoginBO(loginByMcUuidVO);
-            accountType = AccountType.MC_UUID;
-            loginIp = loginByMcUuidVO.getLogin_ip();
+            loginBO.setAccount_type(AccountType.EMAIL);
         }
         if (loginVO instanceof LoginByAccountVO loginByAccountVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByAccountVOToLoginBO(loginByAccountVO);
-            accountType = AccountType.ACCOUNT;
-            loginIp = Context.current().realIp();
+            loginBO.setAccount_type(AccountType.ACCOUNT);
         }
-        return accountService.login(loginBO, loginIp, accountType);
-    }
-
-    @SaIgnore
-    @Transaction
-    @Mapping(path = "/CheckLogin", method = {MethodType.GET, MethodType.POST},
-            name = "查询登陆状态", description = "查询登录状态接口")
-    public Result<Boolean> CheckLogin(String mc_uuid, String ip, Context context) {
-        if (ip == null) ip = context.realIp();
-        return accountService.checkLogin(ip, mc_uuid);
+        if (loginBO != null) loginBO.setReal_ip(Context.current().realIp());
+        return accountService.login(loginBO, token);
     }
 
     @Transaction

@@ -4,6 +4,9 @@ ServerName: QinServer
 # 服务端口
 server.port: 8080
 
+# 内置Minestom服务端口
+minestom.port: 25565
+
 cross.allow-origin: "*"
 
 solon.logging:

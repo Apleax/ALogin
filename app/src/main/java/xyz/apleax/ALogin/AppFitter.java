@@ -29,7 +29,7 @@ public class AppFitter implements Filter {
         } catch (NotPermissionException e) {
             ctx.render(Result.failure("Not permission"));
         } catch (ValidatorException e) {
-            ctx.render(e.getResult());
+            ctx.render(Result.failure(e.getMessage()));
         } catch (ConstructionException |
                  StatusException e) {
             if (e instanceof StatusException) if (!(e.getCause() instanceof InvalidTypeIdException ||
