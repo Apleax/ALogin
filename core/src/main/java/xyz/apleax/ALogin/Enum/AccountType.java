@@ -11,8 +11,7 @@ import lombok.Getter;
 public enum AccountType {
     ACCOUNT("account", "账号"),
     EMAIL("email", "邮箱"),
-    QQ_ACCOUNT("qq_account", "QQ号"),
-    MC_UUID("mc_uuid", "MCUUID");
+    QQ_ACCOUNT("qq_account", "QQ号");
     private final String key;
     private final String value;
 

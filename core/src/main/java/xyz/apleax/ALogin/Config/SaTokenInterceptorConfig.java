@@ -6,8 +6,8 @@ import cn.dev33.satoken.solon.integration.SaTokenInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
-import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 
 /**
@@ -22,16 +22,16 @@ public record SaTokenInterceptorConfig() implements LifecycleBean {
         log.info("SaToken Loading Complete");
     }
 
-    @Bean(index = -100)  //-100，是顺序位（低值优先）
+    @Managed(index = -100)  //-100，是顺序位（低值优先）
     public SaTokenInterceptor saTokenInterceptor() {
         log.info("SaToken Loading...");
         return new SaTokenInterceptor()
                 // 指定 [拦截路由]
                 .addInclude("/**")
                 // 认证函数: 每次请求执行
-                .setAuth(req -> SaRouter.match("/**", StpUtil::checkLogin))
+                .setAuth(_ -> SaRouter.match("/**", StpUtil::checkLogin))
                 // 前置函数：在每次认证函数之前执行
-                .setBeforeAuth(req -> {
+                .setBeforeAuth(_ -> {
                     // ---------- 设置一些安全响应头 ----------
                     SaHolder.getResponse()
                             // 服务器名称

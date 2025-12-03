@@ -11,6 +11,7 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
+import xyz.apleax.ALogin.ConvertMapper.BOtoVOConvert;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
@@ -37,12 +38,12 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Register", method = MethodType.POST,
+    @Mapping(path = "/Register/?{token}?", method = MethodType.POST,
             name = "注册", description = "注册接口，用于注册一个账号")
-    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context) throws Exception {
+    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context, String token) throws Exception {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
-        return accountService.register(accountBO, verify_code, context.realIp());
+        return accountService.register(accountBO, verify_code, context.realIp(), token);
     }
 
     @SaIgnore
@@ -60,40 +61,30 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Login", method = MethodType.POST,
+    @Mapping(path = "/Login/?{token}?", method = MethodType.POST,
             name = "登录", description = "登录接口，用于登录账号")
-    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO) throws Exception {
+    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, String token) throws Exception {
         LoginBO loginBO = null;
-        AccountType accountType = null;
-        String loginIp = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
-            accountType = AccountType.EMAIL;
-            loginIp = Context.current().realIp();
-        }
-        if (loginVO instanceof LoginByMcUuidVO loginByMcUuidVO) {
-            loginBO = VOtoBOConvert.INSTANCE.loginByMcUuidVOToLoginBO(loginByMcUuidVO);
-            accountType = AccountType.MC_UUID;
-            loginIp = loginByMcUuidVO.getLogin_ip();
+            loginBO.setAccount_type(AccountType.EMAIL);
         }
         if (loginVO instanceof LoginByAccountVO loginByAccountVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByAccountVOToLoginBO(loginByAccountVO);
-            accountType = AccountType.ACCOUNT;
-            loginIp = Context.current().realIp();
+            loginBO.setAccount_type(AccountType.ACCOUNT);
         }
-        return accountService.login(loginBO, loginIp, accountType);
+        if (loginBO != null) loginBO.setReal_ip(Context.current().realIp());
+        return accountService.login(loginBO, token);
     }
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/CheckLogin", method = {MethodType.GET, MethodType.POST},
-            name = "查询登陆状态", description = "查询登录状态接口")
-    public Result<Boolean> CheckLogin(String mc_uuid, String ip, Context context) {
-        if (ip == null) ip = context.realIp();
-        return accountService.checkLogin(ip, mc_uuid);
+    @Mapping(path = "/CheckToken", method = MethodType.POST,
+            name = "校验Token", description = "校验Token并获取玩家配置")
+    public GameProfileVO CheckToken(String token) {
+        return BOtoVOConvert.INSTANCE.gameProfileBOToGameProfileVO(accountService.checkToken(token));
     }
 
-    @SaIgnore
     @Transaction
     @Mapping(path = "/GetLoginInfo", method = {MethodType.GET, MethodType.POST},
             name = "获取登陆状态", description = "获取登陆状态接口")
@@ -101,7 +92,6 @@ public class Account {
         return accountService.getLoginInfo();
     }
 
-    @SaIgnore
     @Transaction
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")

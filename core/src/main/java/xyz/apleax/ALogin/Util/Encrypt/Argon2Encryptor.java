@@ -3,14 +3,16 @@ package xyz.apleax.ALogin.Util.Encrypt;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 import org.bouncycastle.util.encoders.Hex;
-import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Managed;
 
 import java.nio.charset.StandardCharsets;
 
 /**
+ * Argon2加密
+ *
  * @author Apleax
  */
-@Component
+@Managed
 public class Argon2Encryptor implements PasswordEncryptor {
     private static final int ITERATIONS = 10;
     private static final int MEMORY = 65536;

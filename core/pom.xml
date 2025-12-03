@@ -6,7 +6,7 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
     </parent>
 
     <groupId>xyz.apleax.ALogin</groupId>
@@ -49,12 +49,6 @@
             <groupId>org.simplejavamail</groupId>
             <artifactId>simple-java-mail</artifactId>
             <version>${simple-java-mail}</version>
-        </dependency>
-        <!-- Sa-Token -->
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-solon-plugin</artifactId>
-            <version>${sa-token.version}</version>
         </dependency>
         <!-- 缓存 -->
         <dependency>

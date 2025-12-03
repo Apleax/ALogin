@@ -8,7 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
 /**
- *
+ * SHA256加密
  *
  * @author Apleax
  */

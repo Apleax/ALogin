@@ -1,9 +1,9 @@
 package xyz.apleax.ALogin.Config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.api.mailer.config.TransportStrategy;
@@ -37,7 +37,7 @@ public record SimpleJavaMailConfig() implements LifecycleBean {
     @Inject("${EmailConfig.Authentication.Password}")
     private static String Password;
 
-    @Bean(index = -100)
+    @Managed(index = -100)
     public Mailer SimpleJavaMailBuilder() {
         log.info("SimpleJavaMailConfig Loading...");
         MailerRegularBuilderImpl mailerRegularBuilder = MailerBuilder

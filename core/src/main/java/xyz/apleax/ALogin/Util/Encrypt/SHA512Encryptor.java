@@ -1,7 +1,7 @@
 package xyz.apleax.ALogin.Util.Encrypt;
 
 import org.bouncycastle.util.encoders.Hex;
-import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Managed;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,7 +13,7 @@ import java.security.NoSuchProviderException;
  *
  * @author Apleax
  */
-@Component
+@Managed
 public class SHA512Encryptor implements PasswordEncryptor {
     @Override
     public String encrypt(String password, String salt) throws NoSuchAlgorithmException, NoSuchProviderException {

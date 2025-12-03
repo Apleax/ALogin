@@ -1,6 +1,5 @@
 package xyz.apleax.ALogin.Util;
 
-import org.noear.solon.Solon;
 import org.noear.solon.Utils;
 import org.noear.solon.vault.VaultCoder;
 
@@ -19,10 +18,6 @@ public class VaultCoderImpl implements VaultCoder {
 
     private final String algorithm = "AES/ECB/PKCS5Padding";
     private SecretKey key;
-
-    public VaultCoderImpl() {
-        this(Solon.cfg().get("DataBase.vault.password"));
-    }
 
     public VaultCoderImpl(String password) {
         try {

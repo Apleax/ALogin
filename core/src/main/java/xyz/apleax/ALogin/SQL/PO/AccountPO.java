@@ -1,7 +1,12 @@
 package xyz.apleax.ALogin.SQL.PO;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * 与数据库交互的账号PO
@@ -9,7 +14,7 @@ import lombok.Data;
  * @author Apleax
  */
 @Data
-@TableName("account")
+@TableName(value = "account", autoResultMap = true)
 public class AccountPO {
     private Long id;
     /**
@@ -25,10 +30,6 @@ public class AccountPO {
      */
     private String avatar;
     /**
-     * 绑定mc时间
-     */
-    private Long bindMcAccountTime;
-    /**
      * 绑定qq时间
      */
     private Long bindQqAccountTime;
@@ -39,7 +40,8 @@ public class AccountPO {
     /**
      * 服务器内uuid
      */
-    private String mcUuid;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private UUID mcUuid;
     /**
      * 昵称
      */
@@ -64,4 +66,9 @@ public class AccountPO {
      * 最后登录IP
      */
     private String lastLoginIp;
+    /**
+     * 权限组
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<String> permission;
 }

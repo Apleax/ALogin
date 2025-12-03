@@ -3,10 +3,10 @@ package xyz.apleax.ALogin.Config;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
-import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.core.util.ResourceUtil;
 import org.noear.solon.vault.VaultUtils;
@@ -34,7 +34,7 @@ public record DataBaseConfig() implements LifecycleBean {
         log.info("DataBaseConfig Loading Complete");
     }
 
-    @Bean(name = "DataBase", typed = true, index = -100)
+    @Managed(name = "DataBase", typed = true, index = -100)
     @Condition(onMissingBean = DataSource.class, onBean = VaultCoderImpl.class)
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
         log.info("DataBaseConfig Loading...");
@@ -51,15 +51,18 @@ public record DataBaseConfig() implements LifecycleBean {
         }
         String jdbcUrl = buildJdbcUrl(dbProps);
         ds.setJdbcUrl(jdbcUrl);
-        if (vaultEnabled) log.warn("""
-                        Vault password: {}
-                        Encrypt database name: {}
-                        Encrypt database username: {}
-                        Encrypt database password: {}""",
-                vaultPassword,
-                VaultUtils.encrypt(dbProps.database()),
-                VaultUtils.encrypt(dbProps.username()),
-                VaultUtils.encrypt(dbProps.password()));
+        if (vaultEnabled) {
+            log.info("""
+                            Vault password: {}
+                            Encrypt database name: {}
+                            Encrypt database username: {}
+                            Encrypt database password: {}""",
+                    vaultPassword,
+                    VaultUtils.encrypt(dbProps.database()),
+                    VaultUtils.encrypt(dbProps.username()),
+                    VaultUtils.encrypt(dbProps.password()));
+            log.info("Fill in the above in the configuration file");
+        }
         ds.setUsername(dbProps.username());
         ds.setPassword(dbProps.password());
         if ("sqlite".equals(choose)) {
@@ -80,7 +83,7 @@ public record DataBaseConfig() implements LifecycleBean {
         return ds;
     }
 
-    @Bean(typed = true, index = -100)
+    @Managed(typed = true, index = -100)
     public VaultCoderImpl vaultCoderInit() {
         if (vaultEnabled) vaultPassword = RandomStringUtils.generateLowerUpper(16);
         return new VaultCoderImpl(vaultPassword);
