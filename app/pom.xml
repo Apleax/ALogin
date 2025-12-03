@@ -6,7 +6,7 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
     </parent>
 
     <groupId>xyz.apleax.ALogin</groupId>
@@ -19,6 +19,11 @@
             <artifactId>core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>xyz.apleax.ALogin</groupId>
+            <artifactId>server</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
         <!-- Solon核心包 -->
         <dependency>
             <groupId>org.noear</groupId>
@@ -27,7 +32,7 @@
         <!-- Http 启动器 -->
         <dependency>
             <groupId>org.noear</groupId>
-            <artifactId>solon-server-vertx</artifactId>
+            <artifactId>solon-server-undertow</artifactId>
         </dependency>
         <!-- Json序列化支持插件 -->
         <dependency>

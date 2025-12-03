@@ -7,7 +7,7 @@ import java.util.Random;
  * 用于生成随机字符串的实用程序。
  *
  * @author HaHaWTH
- * @link <a href="https://github.com/HaHaWTH/AuthMeReReloaded/blob/master/src/main/java/fr/xephi/authme/util/RandomStringUtils.java">AuthMeReReloaded</a>
+ * @see <a href="https://github.com/HaHaWTH/AuthMeReReloaded/blob/master/src/main/java/fr/xephi/authme/util/RandomStringUtils.java">AuthMeReReloaded</a>
  */
 public final class RandomStringUtils {
 

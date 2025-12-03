@@ -2,16 +2,32 @@
 ServerName: QinServer
 
 # 服务端口
-server.port: 8080
+server:
+  # 前端登录地址，用于生成登陆链接
+  address: "https://example.xyz/Login"
+  # 后端服务端口
+  port: 8080
+
+minestom:
+  # 内置Minestom服务端口
+  port: 25565
+  # 登陆成功后跳转服务器地址
+  transfer: "localhost:25566"
+  # 转移服务器使用的CookieKey，与目标服务器配置相对应
+  cookie-key: "alogin"
+
+cross.allow-origin: "*"
 
 solon.logging:
   appender:
     # 控制台日志输出级别
     console:
       level: INFO
+      enable: true #是否启用
     # 文件日志输出级别
     file:
       level: INFO
+      enable: true #是否启用
 
 sa-token:
   # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
@@ -42,7 +58,7 @@ EmailConfig:
 DataBase:
   # 填写数据库用户名密码后开启，密钥留空生成密钥和脱敏数据
   vault:
-    enabled: true
+    enabled: false
     password: ""
   # 可选数据库: MYSQL,SQLSERVER
   choose: MYSQL
