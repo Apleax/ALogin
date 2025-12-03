@@ -3,6 +3,7 @@ package xyz.apleax.ALogin.Entity.BO;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Apleax
@@ -14,7 +15,7 @@ public class AccountBO {
     private String avatar;
     private Long bindQqAccountTime;
     private String email;
-    private String mcUuid;
+    private UUID mcUuid;
     private String nickName;
     private String password;
     private Long qqAccount;

@@ -3,6 +3,7 @@ package xyz.apleax.ALogin.Service;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import org.noear.solon.core.handle.Result;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
+import xyz.apleax.ALogin.Entity.BO.GameProfileBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 
@@ -20,7 +21,7 @@ public interface AccountService {
      * @param real_ip     真实ip
      * @author Apleax
      */
-    Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip) throws Exception;
+    Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip, String token) throws Exception;
 
     /**
      * 登录
@@ -61,4 +62,12 @@ public interface AccountService {
      * @author Apleax
      */
     Result<Boolean> resetPassword(String email, String verify_code, String new_password) throws Exception;
+
+    /**
+     * 校验Token
+     *
+     * @param token Token
+     * @return GameProfile
+     */
+    GameProfileBO checkToken(String token);
 }

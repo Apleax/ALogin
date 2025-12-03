@@ -11,6 +11,7 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
+import xyz.apleax.ALogin.ConvertMapper.BOtoVOConvert;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
@@ -37,12 +38,12 @@ public class Account {
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Register", method = MethodType.POST,
+    @Mapping(path = "/Register/?{token}?", method = MethodType.POST,
             name = "注册", description = "注册接口，用于注册一个账号")
-    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context) throws Exception {
+    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context, String token) throws Exception {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
-        return accountService.register(accountBO, verify_code, context.realIp());
+        return accountService.register(accountBO, verify_code, context.realIp(), token);
     }
 
     @SaIgnore
@@ -74,6 +75,14 @@ public class Account {
         }
         if (loginBO != null) loginBO.setReal_ip(Context.current().realIp());
         return accountService.login(loginBO, token);
+    }
+
+    @SaIgnore
+    @Transaction
+    @Mapping(path = "/CheckToken", method = MethodType.POST,
+            name = "校验Token", description = "校验Token并获取玩家配置")
+    public GameProfileVO CheckToken(String token) {
+        return BOtoVOConvert.INSTANCE.gameProfileBOToGameProfileVO(accountService.checkToken(token));
     }
 
     @Transaction

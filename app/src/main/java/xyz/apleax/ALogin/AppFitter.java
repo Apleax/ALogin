@@ -37,7 +37,7 @@ public class AppFitter implements Filter {
             ctx.render(Result.failure("Invalid parameter"));
         } catch (Exception e) {
             ctx.render(Result.failure("Server error"));
-            log.error(e.getLocalizedMessage());
+            log.error(e.getLocalizedMessage(), e);
         }
     }
 }

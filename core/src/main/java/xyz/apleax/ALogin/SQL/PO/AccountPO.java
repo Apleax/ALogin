@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 与数据库交互的账号PO
@@ -39,7 +40,8 @@ public class AccountPO {
     /**
      * 服务器内uuid
      */
-    private String mcUuid;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private UUID mcUuid;
     /**
      * 昵称
      */

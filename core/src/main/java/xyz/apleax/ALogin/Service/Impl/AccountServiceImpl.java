@@ -15,6 +15,7 @@ import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.ConvertMapper.BOtoPOConvert;
 import xyz.apleax.ALogin.Entity.BO.AccountBO;
+import xyz.apleax.ALogin.Entity.BO.GameProfileBO;
 import xyz.apleax.ALogin.Entity.BO.LoginBO;
 import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
@@ -29,6 +30,7 @@ import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -59,7 +61,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transaction
-    public Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip) throws Exception {
+    public Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip, String token) throws Exception {
         if (checkVerifyCode(new VerifyCodeKey(accountBO.getEmail(), VerifyCodeType.REGISTER), verify_code))
             return Result.failure("验证码错误");
         String accountId = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, accountBO.getEmail()));
@@ -75,6 +77,7 @@ public class AccountServiceImpl implements AccountService {
         accountCache.put(accountPO.getAccount(), accountPO);
         StpUtil.login(accountPO.getAccount(), AccountType.EMAIL.getKey());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        if (token != null) Dami.bus().send("LoginEvent", Map.of("account", accountPO, "token", token));
         return Result.succeed(tokenInfo);
     }
 
@@ -104,7 +107,7 @@ public class AccountServiceImpl implements AccountService {
         accountBO.setSalt(salt);
         accountBO.setAlgorithm(encryptor.algorithmName());
         accountBO.setMcUuid(UUID.nameUUIDFromBytes(("Account:" + accountBO.getAccount())
-                .getBytes(StandardCharsets.UTF_8)).toString());
+                .getBytes(StandardCharsets.UTF_8)));
         return accountBO;
     }
 
@@ -190,5 +193,16 @@ public class AccountServiceImpl implements AccountService {
             StpUtil.logout(account);
         } else log.warn("Failed to update password for email: {}", email);
         return Result.succeed(true);
+    }
+
+    @Override
+    public GameProfileBO checkToken(String token) {
+        String account;
+        if (token == null) account = StpUtil.getLoginIdAsString();
+        else account = (String) StpUtil.getLoginIdByToken(token);
+        if (account == null) return null;
+        AccountPO accountPO = accountCache.get(account);
+        if (accountPO == null) return null;
+        return new GameProfileBO(accountPO.getMcUuid(), accountPO.getNickName(), Collections.emptyList());
     }
 }

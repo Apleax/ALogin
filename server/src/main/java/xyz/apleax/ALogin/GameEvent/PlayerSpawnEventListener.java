@@ -34,7 +34,7 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
         Player player = event.getPlayer();
         event.getPlayer().setVelocity(Vec.ZERO);
         player.setFlying(true);
-        String token = SaTempUtil.createToken(player.getUuid(), Duration.ofMinutes(5).getSeconds());
+        String token = SaTempUtil.createToken(player.getUuid(), Duration.ofMinutes(5).getSeconds(), true);
         String link = Solon.cfg().get("server.address");
         if (!link.endsWith("/")) link += "/";
         TextComponent linkComponent = Component.text("[登录]", TextColor.color(152, 251, 152))

@@ -32,7 +32,8 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
         if (player == null) return;
         String address = transfer.split(":")[0];
         int port = Integer.parseInt(transfer.split(":")[1]);
-        player.getPlayerConnection().storeCookie("alogin:token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
+        String key = Solon.cfg().get("minestom.cookie-key");
+        player.getPlayerConnection().storeCookie(key + ":token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
         player.sendPacket(new TransferPacket(address, port));
         SaTempUtil.deleteToken(map.get("token"));
     }

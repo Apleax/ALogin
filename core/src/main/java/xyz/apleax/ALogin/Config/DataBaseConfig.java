@@ -51,15 +51,18 @@ public record DataBaseConfig() implements LifecycleBean {
         }
         String jdbcUrl = buildJdbcUrl(dbProps);
         ds.setJdbcUrl(jdbcUrl);
-        if (vaultEnabled) log.info("""
-                        Vault password: {}
-                        Encrypt database name: {}
-                        Encrypt database username: {}
-                        Encrypt database password: {}""",
-                vaultPassword,
-                VaultUtils.encrypt(dbProps.database()),
-                VaultUtils.encrypt(dbProps.username()),
-                VaultUtils.encrypt(dbProps.password()));
+        if (vaultEnabled) {
+            log.info("""
+                            Vault password: {}
+                            Encrypt database name: {}
+                            Encrypt database username: {}
+                            Encrypt database password: {}""",
+                    vaultPassword,
+                    VaultUtils.encrypt(dbProps.database()),
+                    VaultUtils.encrypt(dbProps.username()),
+                    VaultUtils.encrypt(dbProps.password()));
+            log.info("Fill in the above in the configuration file");
+        }
         ds.setUsername(dbProps.username());
         ds.setPassword(dbProps.password());
         if ("sqlite".equals(choose)) {
