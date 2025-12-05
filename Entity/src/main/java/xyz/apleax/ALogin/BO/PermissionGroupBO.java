@@ -1,7 +1,7 @@
-package xyz.apleax.ALogin.Entity.BO;
+package xyz.apleax.ALogin.BO;
 
 import lombok.Data;
-import xyz.apleax.ALogin.Entity.POJO.PermissionNode;
+import xyz.apleax.ALogin.POJO.PermissionNode;
 
 import java.util.List;
 

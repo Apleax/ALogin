@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service.Impl;
+package xyz.apleax.ALogin.Service;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
@@ -8,23 +8,23 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.Dami;
+import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
+import xyz.apleax.ALogin.BO.AccountBO;
+import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.ConvertMapper.BOtoPOConvert;
-import xyz.apleax.ALogin.Entity.BO.AccountBO;
-import xyz.apleax.ALogin.Entity.BO.GameProfileBO;
-import xyz.apleax.ALogin.Entity.BO.LoginBO;
-import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.VerifyCodeType;
-import xyz.apleax.ALogin.SQL.PO.AccountPO;
+import xyz.apleax.ALogin.PO.AccountPO;
+import xyz.apleax.ALogin.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.POJO.VerifyCodeKey;
+import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
-import xyz.apleax.ALogin.Service.AccountService;
 import xyz.apleax.ALogin.Util.EmailVerifyCodeUtil;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
@@ -39,7 +39,8 @@ import java.util.UUID;
  */
 @Slf4j
 @Managed
-public class AccountServiceImpl implements AccountService {
+@DamiTopic("account")
+public class AccountServiceImpl {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
@@ -59,7 +60,6 @@ public class AccountServiceImpl implements AccountService {
         this.encryptor = encryptor;
     }
 
-    @Override
     @Transaction
     public Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip, String token) throws Exception {
         if (checkVerifyCode(new VerifyCodeKey(accountBO.getEmail(), VerifyCodeType.REGISTER), verify_code))
@@ -111,7 +111,6 @@ public class AccountServiceImpl implements AccountService {
         return accountBO;
     }
 
-    @Override
     @Transaction
     public Result<SaTokenInfo> login(LoginBO loginBO, String token) throws Exception {
         AccountType accountType = loginBO.getAccount_type();
@@ -143,7 +142,6 @@ public class AccountServiceImpl implements AccountService {
         };
     }
 
-    @Override
     @Transaction
     public Result<Long> verifyCode(VerifyCodeKey verifyCodeKey) {
         if (verifyCodeKey.type() == VerifyCodeType.RESET_PASSWORD) {
@@ -166,18 +164,18 @@ public class AccountServiceImpl implements AccountService {
         return Result.succeed();
     }
 
-    @Override
+    @Transaction
     public Result<SaTokenInfo> getLoginInfo() {
         return Result.succeed(StpUtil.getTokenInfo());
     }
 
-    @Override
+    @Transaction
     public Result<SaTokenInfo> logout() {
         StpUtil.logout();
         return Result.succeed();
     }
 
-    @Override
+    @Transaction
     public Result<Boolean> resetPassword(String email, String verify_code, String new_password) throws Exception {
         if (checkVerifyCode(new VerifyCodeKey(email, VerifyCodeType.RESET_PASSWORD), verify_code))
             return Result.failure("验证码错误");
@@ -195,14 +193,14 @@ public class AccountServiceImpl implements AccountService {
         return Result.succeed(true);
     }
 
-    @Override
-    public GameProfileBO checkToken(String token) {
+    @Transaction
+    public GameProfile checkToken(String token) {
         String account;
         if (token == null) account = StpUtil.getLoginIdAsString();
         else account = (String) StpUtil.getLoginIdByToken(token);
         if (account == null) return null;
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return null;
-        return new GameProfileBO(accountPO.getMcUuid(), accountPO.getNickName(), Collections.emptyList());
+        return new GameProfile(accountPO.getMcUuid(), accountPO.getNickName(), Collections.emptyList());
     }
 }

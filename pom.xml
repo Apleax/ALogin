@@ -7,13 +7,13 @@
     <parent>
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
-        <version>3.7.1</version>
+        <version>3.7.3</version>
         <relativePath/>
     </parent>
 
     <groupId>xyz.apleax</groupId>
     <artifactId>ALogin</artifactId>
-    <version>0.2.0</version>
+    <version>0.5.0</version>
 
     <packaging>pom</packaging>
 
@@ -23,6 +23,7 @@
         <module>app</module>
         <module>core</module>
         <module>server</module>
+        <module>Entity</module>
     </modules>
 
     <!-- 依赖版本 -->
@@ -35,16 +36,52 @@
         <jsqlparser.version>3.5.11</jsqlparser.version>
         <HikariCP.version>7.0.0</HikariCP.version>
         <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
-        <SQLServer-Driver.version>12.10.1.jre11</SQLServer-Driver.version>
+        <SQLServer-Driver.version>13.2.1.jre11</SQLServer-Driver.version>
         <simple-java-mail>8.12.6</simple-java-mail>
         <sa-token.version>1.44.0</sa-token.version>
         <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
         <caffeine.version>3.2.2</caffeine.version>
         <bcpkix.version>1.81</bcpkix.version>
         <minestom.version>2025.10.31-1.21.10</minestom.version>
+        <damibus.version>2.0.4</damibus.version>
     </properties>
 
     <dependencies>
+        <!-- Solon核心包 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-lib</artifactId>
+        </dependency>
+        <!-- Http 启动器 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-server-undertow</artifactId>
+        </dependency>
+        <!-- Json序列化支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-serialization-jackson</artifactId>
+        </dependency>
+        <!-- 本地SessionSate支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-sessionstate-local</artifactId>
+        </dependency>
+        <!-- 静态文件支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-web-staticfiles</artifactId>
+        </dependency>
+        <!-- 跨域处理插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-web-cors</artifactId>
+        </dependency>
+        <!-- 参数与实体验证扩展插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-security-validation</artifactId>
+        </dependency>
         <!-- 日志 -->
         <dependency>
             <groupId>org.noear</groupId>
@@ -76,13 +113,19 @@
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>dami2-solon-plugin</artifactId>
-            <version>2.0.0</version>
+            <version>${damibus.version}</version>
         </dependency>
         <!-- Sa-Token -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-solon-plugin</artifactId>
             <version>${sa-token.version}</version>
+        </dependency>
+        <!-- mybatis-plus -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-solon-plugin</artifactId>
+            <version>${mybatis-plus.version}</version>
         </dependency>
     </dependencies>
 

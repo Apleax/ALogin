@@ -1,17 +1,19 @@
 package xyz.apleax.ALogin.Service;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
+import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.core.handle.Result;
-import xyz.apleax.ALogin.Entity.BO.AccountBO;
-import xyz.apleax.ALogin.Entity.BO.GameProfileBO;
-import xyz.apleax.ALogin.Entity.BO.LoginBO;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
+import xyz.apleax.ALogin.BO.AccountBO;
+import xyz.apleax.ALogin.BO.LoginBO;
+import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 
 /**
  * 账号Service
  *
  * @author Apleax
  */
+@DamiTopic("account")
 public interface AccountService {
     /**
      * 注册
@@ -21,7 +23,7 @@ public interface AccountService {
      * @param real_ip     真实ip
      * @author Apleax
      */
-    Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip, String token) throws Exception;
+    Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip, String token);
 
     /**
      * 登录
@@ -29,7 +31,7 @@ public interface AccountService {
      * @param loginBO 登录信息
      * @author Apleax
      */
-    Result<SaTokenInfo> login(LoginBO loginBO, String token) throws Exception;
+    Result<SaTokenInfo> login(LoginBO loginBO, String token);
 
     /**
      * 邮箱验证码
@@ -61,7 +63,7 @@ public interface AccountService {
      * @param new_password 新密码
      * @author Apleax
      */
-    Result<Boolean> resetPassword(String email, String verify_code, String new_password) throws Exception;
+    Result<Boolean> resetPassword(String email, String verify_code, String new_password);
 
     /**
      * 校验Token
@@ -69,5 +71,5 @@ public interface AccountService {
      * @param token Token
      * @return GameProfile
      */
-    GameProfileBO checkToken(String token);
+    GameProfile checkToken(String token);
 }

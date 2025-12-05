@@ -1,11 +1,10 @@
-package xyz.apleax.ALogin.SQL.PO;
+package xyz.apleax.ALogin.PO;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -66,9 +65,4 @@ public class AccountPO {
      * 最后登录IP
      */
     private String lastLoginIp;
-    /**
-     * 权限组
-     */
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<String> permission;
 }

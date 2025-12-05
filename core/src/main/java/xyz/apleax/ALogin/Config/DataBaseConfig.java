@@ -153,6 +153,7 @@ public record DataBaseConfig() implements LifecycleBean {
             }
         } catch (Exception e) {
             log.warn("Failed to initialize table: {}", e.getMessage(), e);
+            Solon.stop();
         }
     }
 

@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Entity.POJO;
+package xyz.apleax.ALogin.POJO;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

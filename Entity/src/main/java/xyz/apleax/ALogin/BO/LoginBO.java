@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Entity.BO;
+package xyz.apleax.ALogin.BO;
 
 import lombok.Data;
 import xyz.apleax.ALogin.Enum.AccountType;

@@ -2,7 +2,7 @@ package xyz.apleax.ALogin.SQL.Mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
-import xyz.apleax.ALogin.SQL.PO.AccountPO;
+import xyz.apleax.ALogin.PO.AccountPO;
 
 /**
  * @author Apleax

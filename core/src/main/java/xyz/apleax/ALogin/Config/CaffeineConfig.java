@@ -10,10 +10,10 @@ import org.noear.solon.annotation.Configuration;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
-import xyz.apleax.ALogin.Entity.POJO.AccountIndexCache;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodePOJO;
-import xyz.apleax.ALogin.SQL.PO.AccountPO;
+import xyz.apleax.ALogin.PO.AccountPO;
+import xyz.apleax.ALogin.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.POJO.VerifyCodeKey;
+import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 

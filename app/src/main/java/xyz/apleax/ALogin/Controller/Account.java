@@ -11,12 +11,12 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
-import xyz.apleax.ALogin.ConvertMapper.BOtoVOConvert;
+import xyz.apleax.ALogin.BO.AccountBO;
+import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
-import xyz.apleax.ALogin.Entity.BO.AccountBO;
-import xyz.apleax.ALogin.Entity.BO.LoginBO;
-import xyz.apleax.ALogin.Entity.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Service.AccountService;
 import xyz.apleax.ALogin.VO.*;
 
@@ -40,7 +40,7 @@ public class Account {
     @Transaction
     @Mapping(path = "/Register/?{token}?", method = MethodType.POST,
             name = "注册", description = "注册接口，用于注册一个账号")
-    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context, String token) throws Exception {
+    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context, String token) {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
         return accountService.register(accountBO, verify_code, context.realIp(), token);
@@ -63,7 +63,7 @@ public class Account {
     @Transaction
     @Mapping(path = "/Login/?{token}?", method = MethodType.POST,
             name = "登录", description = "登录接口，用于登录账号")
-    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, String token) throws Exception {
+    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, String token) {
         LoginBO loginBO = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
@@ -81,8 +81,8 @@ public class Account {
     @Transaction
     @Mapping(path = "/CheckToken", method = MethodType.POST,
             name = "校验Token", description = "校验Token并获取玩家配置")
-    public GameProfileVO CheckToken(String token) {
-        return BOtoVOConvert.INSTANCE.gameProfileBOToGameProfileVO(accountService.checkToken(token));
+    public GameProfile CheckToken(String token) {
+        return accountService.checkToken(token);
     }
 
     @Transaction
@@ -103,7 +103,7 @@ public class Account {
     @Transaction
     @Mapping(path = "/ResetPassword", method = MethodType.POST,
             name = "重置密码", description = "重置密码接口")
-    public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) throws Exception {
+    public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) {
         return accountService.resetPassword(resetPasswordVO.getEmail(),
                 resetPasswordVO.getVerify_code(),
                 resetPasswordVO.getNew_password());

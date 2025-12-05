@@ -1,8 +1,7 @@
-package xyz.apleax.ALogin.Entity.BO;
+package xyz.apleax.ALogin.BO;
 
 import lombok.Data;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -22,5 +21,4 @@ public class AccountBO {
     private Long registrationTime;
     private String salt;
     private String lastLoginIp;
-    private List<String> permission;
 }

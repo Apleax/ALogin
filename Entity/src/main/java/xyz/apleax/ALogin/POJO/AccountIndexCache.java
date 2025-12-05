@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Entity.POJO;
+package xyz.apleax.ALogin.POJO;
 
 import xyz.apleax.ALogin.Enum.AccountType;
 
