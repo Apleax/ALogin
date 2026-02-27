@@ -7,6 +7,9 @@ server:
   address: "https://example.xyz/Login"
   # 后端服务端口
   port: 8080
+#  ssl:
+#    keyStore: "classpath:https.jks"
+#    keyPassword: "Apleax133137"
 
 minestom:
   # 内置Minestom服务端口
@@ -22,10 +25,6 @@ solon.logging:
   appender:
     # 控制台日志输出级别
     console:
-      level: INFO
-      enable: true #是否启用
-    # 文件日志输出级别
-    file:
       level: INFO
       enable: true #是否启用
 

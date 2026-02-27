@@ -47,7 +47,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                 .initialCapacity(100)
                 .expireAfterWrite(Duration.ofMinutes(30))
                 .recordStats()
-                .build(_ -> new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(6), null));
+                .build(_ -> new VerifyCodePOJO(RandomStringUtils.generateLowerUpper(4), null));
     }
 
     // 账号缓存

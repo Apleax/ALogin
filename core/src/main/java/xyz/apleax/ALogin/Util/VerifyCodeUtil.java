@@ -1,12 +1,16 @@
 package xyz.apleax.ALogin.Util;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.util.ResourceUtil;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.email.EmailBuilder;
+import xyz.apleax.ALogin.POJO.VerifyCodeKey;
+import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -20,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Managed
-public final class EmailVerifyCodeUtil {
+public final class VerifyCodeUtil {
     // 邮件工具
     @Inject
     private static Mailer mailer;
@@ -36,6 +40,9 @@ public final class EmailVerifyCodeUtil {
     // 服务器名称
     @Inject("${ServerName}")
     private static String Server;
+    // 验证码缓存
+    @Inject("VerifyCode")
+    private static LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
 
     /**
      * 构建邮件发送
@@ -66,5 +73,20 @@ public final class EmailVerifyCodeUtil {
         } catch (IOException e) {
             log.error("IOException: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 校验验证码
+     *
+     * @param key        验证码缓存键
+     * @param verifyCode 验证码
+     * @return 是否通过校验
+     * @author Apleax
+     */
+    public static boolean checkVerifyCode(VerifyCodeKey key, String verifyCode) {
+        VerifyCodePOJO code = verifyCodeCache.get(key);
+        if (code == null || !code.getVerifyCode().equals(verifyCode)) return true;
+        verifyCodeCache.invalidate(key);
+        return false;
     }
 }

@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.TextColor;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventListener;
@@ -13,6 +14,7 @@ import net.minestom.server.timer.Scheduler;
 import net.minestom.server.timer.TaskSchedule;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.Solon;
+import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
 
 import java.time.Duration;
@@ -23,6 +25,7 @@ import java.time.Duration;
  * @author Apleax
  */
 @Managed(index = -999)
+@Condition(onClass = MinecraftServer.class)
 public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSpawnEvent> {
     @Override
     public @NotNull Class<@NotNull PlayerSpawnEvent> eventType() {

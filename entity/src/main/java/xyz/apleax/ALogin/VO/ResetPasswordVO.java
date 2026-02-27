@@ -14,7 +14,7 @@ public class ResetPasswordVO {
     @Email(message = "邮箱格式错误")
     String email;
     @NotBlank(message = "验证码不能为空")
-    @Length(min = 6, max = 6, message = "验证码长度必须为6")
+    @Length(min = 4, max = 4, message = "验证码长度必须为4")
     String verify_code;
     @NotBlank(message = "新密码不能为空")
     @Length(min = 6, max = 24, message = "密码长度必须在6-24之间")

@@ -5,18 +5,18 @@ solon:
     group: 'xyz.apleax'
     version: @project.version@
 
-solon.logging:
-  appender:
-    # 控制台日志输出级别
-    console:
-      level: INFO
-    # 文件日志输出级别
-    file:
-      level: DEBUG
-      name: "logs/${solon.app.name}"
-      extension: ".log"   #v2.2.18 后支持（例：.log, .log.gz, .log.zip）
-      maxFileSize: "10 MB"
-      maxHistory: "7" #单位：天
+solon.logging.appender:
+  # 控制台日志输出级别
+  console:
+    level: INFO
+  # 文件日志输出级别
+  file:
+    enable: true
+    level: DEBUG
+    name: "logs/${solon.app.name}"
+    extension: ".log"
+    maxFileSize: "10 MB"
+    maxHistory: "7"
 
 server:
   http:
