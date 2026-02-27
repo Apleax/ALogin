@@ -6,17 +6,17 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.5.0</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>xyz.apleax.ALogin</groupId>
-    <artifactId>core</artifactId>
+    <artifactId>ALogin-core</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>Entity</artifactId>
-            <version>0.5.0</version>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-entity</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <!-- SQL解析器 -->
         <dependency>
@@ -41,13 +41,23 @@
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>${SQLServer-Driver.version}</version>
-            <scope>compile</scope>
         </dependency>
         <!-- 邮箱 -->
         <dependency>
             <groupId>org.simplejavamail</groupId>
             <artifactId>simple-java-mail</artifactId>
             <version>${simple-java-mail}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>angus-mail</artifactId>
+                    <groupId>org.eclipse.angus</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <version>2.0.4</version>
         </dependency>
         <!-- 缓存 -->
         <dependency>
@@ -67,8 +77,8 @@
             <artifactId>solon-security-vault</artifactId>
         </dependency>
     </dependencies>
-
+    
     <build>
-        <finalName>${project.parent.artifactId}-${project.artifactId}</finalName>
+        <finalName>${project.artifactId}-${project.parent.version}</finalName>
     </build>
 </project>

@@ -6,23 +6,28 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.5.0</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>xyz.apleax.ALogin</groupId>
-    <artifactId>app</artifactId>
+    <artifactId>ALogin-app</artifactId>
 
     <dependencies>
         <!-- ALogin引入核心包 -->
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>core</artifactId>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>Entity</artifactId>
-            <version>0.5.0</version>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-entity</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-server</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 

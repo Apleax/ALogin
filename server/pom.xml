@@ -6,26 +6,37 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.5.0</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>xyz.apleax.ALogin</groupId>
-    <artifactId>server</artifactId>
+    <artifactId>ALogin-server</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>Entity</artifactId>
-            <version>0.5.0</version>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-entity</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>net.minestom</groupId>
             <artifactId>minestom</artifactId>
             <version>${minestom.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.2</version>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>${project.parent.artifactId}-${project.artifactId}</finalName>
+        <finalName>${project.artifactId}-${project.parent.version}</finalName>
     </build>
 </project>

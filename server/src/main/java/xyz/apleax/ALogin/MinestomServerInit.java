@@ -1,6 +1,7 @@
 package xyz.apleax.ALogin;
 
 import lombok.extern.slf4j.Slf4j;
+import net.minestom.server.Auth;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.event.Event;
@@ -10,10 +11,7 @@ import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.world.DimensionType;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.Solon;
-import org.noear.solon.annotation.Destroy;
-import org.noear.solon.annotation.Init;
-import org.noear.solon.annotation.Inject;
-import org.noear.solon.annotation.Managed;
+import org.noear.solon.annotation.*;
 
 import java.net.InetSocketAddress;
 
@@ -24,13 +22,14 @@ import java.net.InetSocketAddress;
  */
 @Slf4j
 @Managed
+@Condition(onClass = MinecraftServer.class)
 public class MinestomServerInit {
     @Inject("${minestom.port:25565}")
     private static Integer port;
 
     @Init
     public void init() {
-        MinecraftServer server = MinecraftServer.init();
+        MinecraftServer server = MinecraftServer.init(new Auth.Offline());
         server.start(new InetSocketAddress(port));
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
         Solon.context().wrapAndPut(InstanceManager.class, instanceManager);

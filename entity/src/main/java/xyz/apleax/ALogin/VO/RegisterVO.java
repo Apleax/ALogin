@@ -28,6 +28,6 @@ public class RegisterVO {
      * 验证码
      */
     @NotBlank(message = "验证码不能为空")
-    @Length(min = 6, max = 6, message = "验证码长度必须为6")
+    @Length(min = 4, max = 4, message = "验证码长度必须为6")
     private String verify_code;
 }

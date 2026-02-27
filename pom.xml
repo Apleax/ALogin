@@ -7,13 +7,13 @@
     <parent>
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
-        <version>3.7.3</version>
+        <version>3.9.4</version>
         <relativePath/>
     </parent>
 
     <groupId>xyz.apleax</groupId>
     <artifactId>ALogin</artifactId>
-    <version>0.5.0</version>
+    <version>${revision}</version>
 
     <packaging>pom</packaging>
 
@@ -23,12 +23,12 @@
         <module>app</module>
         <module>core</module>
         <module>server</module>
-        <module>Entity</module>
+        <module>entity</module>
     </modules>
 
     <!-- 依赖版本 -->
     <properties>
-        <project.version>${project.version}</project.version>
+        <revision>0.5.6</revision>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -40,10 +40,11 @@
         <simple-java-mail>8.12.6</simple-java-mail>
         <sa-token.version>1.44.0</sa-token.version>
         <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
-        <caffeine.version>3.2.2</caffeine.version>
+        <caffeine.version>3.2.3</caffeine.version>
         <bcpkix.version>1.81</bcpkix.version>
-        <minestom.version>2025.10.31-1.21.10</minestom.version>
+        <minestom.version>2026.02.19-1.21.11</minestom.version>
         <damibus.version>2.0.4</damibus.version>
+        <java-websocket-client.version>1.1</java-websocket-client.version>
     </properties>
 
     <dependencies>
@@ -55,7 +56,13 @@
         <!-- Http 启动器 -->
         <dependency>
             <groupId>org.noear</groupId>
-            <artifactId>solon-server-undertow</artifactId>
+            <artifactId>solon-server-smarthttp</artifactId>
+        </dependency>
+        <!-- WebSocket 客户端 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>java-websocket-ns</artifactId>
+            <version>${java-websocket-client.version}</version>
         </dependency>
         <!-- Json序列化支持插件 -->
         <dependency>
@@ -85,7 +92,7 @@
         <!-- 日志 -->
         <dependency>
             <groupId>org.noear</groupId>
-            <artifactId>solon-logging-logback</artifactId>
+            <artifactId>solon-logging-logback-jakarta</artifactId>
         </dependency>
         <!-- lombok -->
         <dependency>

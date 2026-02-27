@@ -9,6 +9,8 @@ import org.noear.dami2.bus.Event;
 import org.noear.dami2.bus.EventListener;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.Solon;
+import org.noear.solon.annotation.Condition;
+import org.noear.solon.annotation.Managed;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -20,8 +22,11 @@ import java.util.UUID;
  * @author Apleax
  */
 @DamiTopic("LoginEvent")
+@Managed
+@Condition(onClass = MinecraftServer.class)
 public class LoginEventListener implements EventListener<Map<String, String>> {
     private static final String transfer = Solon.cfg().get("minestom.transfer");
+    private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
 
     @Override
     public void onEvent(Event<Map<String, String>> event) {
@@ -30,10 +35,16 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
         if (value == null) return;
         Player player = MinecraftServer.getConnectionManager().getOnlinePlayerByUuid(value);
         if (player == null) return;
-        String address = transfer.split(":")[0];
-        int port = Integer.parseInt(transfer.split(":")[1]);
-        String key = Solon.cfg().get("minestom.cookie-key");
-        player.getPlayerConnection().storeCookie(key + ":token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
+        String address;
+        int port;
+        if (transfer.contains(":")) {
+            address = transfer.split(":")[0];
+            port = Integer.parseInt(transfer.split(":")[1]);
+        } else {
+            address = transfer;
+            port = 25565;
+        }
+        player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
         player.sendPacket(new TransferPacket(address, port));
         SaTempUtil.deleteToken(map.get("token"));
     }
