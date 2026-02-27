@@ -6,58 +6,28 @@
     <parent>
         <groupId>xyz.apleax</groupId>
         <artifactId>ALogin</artifactId>
-        <version>0.2.0</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>xyz.apleax.ALogin</groupId>
-    <artifactId>app</artifactId>
+    <artifactId>ALogin-app</artifactId>
 
     <dependencies>
         <!-- ALogin引入核心包 -->
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>core</artifactId>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>xyz.apleax.ALogin</groupId>
-            <artifactId>server</artifactId>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-entity</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <!-- Solon核心包 -->
         <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-lib</artifactId>
-        </dependency>
-        <!-- Http 启动器 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-server-undertow</artifactId>
-        </dependency>
-        <!-- Json序列化支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-serialization-jackson</artifactId>
-        </dependency>
-        <!-- 本地SessionSate支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-sessionstate-local</artifactId>
-        </dependency>
-        <!-- 静态文件支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-web-staticfiles</artifactId>
-        </dependency>
-        <!-- 跨域处理插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-web-cors</artifactId>
-        </dependency>
-        <!-- 参数与实体验证扩展插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-security-validation</artifactId>
+            <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-server</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 

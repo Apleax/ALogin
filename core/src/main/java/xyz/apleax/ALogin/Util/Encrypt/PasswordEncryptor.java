@@ -6,7 +6,7 @@ package xyz.apleax.ALogin.Util.Encrypt;
  * @author Apleax
  */
 public interface PasswordEncryptor {
-    String encrypt(String password, String salt) throws Exception;
+    String encrypt(String password, String salt);
 
     default String algorithmName() {
         return this.getClass().getSimpleName().replace("Encryptor", "").toUpperCase();

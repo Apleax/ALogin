@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin.GameEvent;
 
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
@@ -8,6 +9,7 @@ import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
 import org.jetbrains.annotations.NotNull;
+import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
 
 /**
@@ -16,6 +18,7 @@ import org.noear.solon.annotation.Managed;
  * @author Apleax
  */
 @Managed(index = -999)
+@Condition(onClass = MinecraftServer.class)
 public class AsyncPlayerConfigurationEventListener implements EventListener<@NotNull AsyncPlayerConfigurationEvent> {
     private final InstanceManager instanceManager;
     private final InstanceContainer instanceContainer;

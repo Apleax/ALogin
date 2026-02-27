@@ -1,10 +1,12 @@
 package xyz.apleax.ALogin.GameEvent;
 
 import cn.dev33.satoken.temp.SaTempUtil;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.instance.InstanceManager;
 import org.jetbrains.annotations.NotNull;
+import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
 
 /**
@@ -13,6 +15,7 @@ import org.noear.solon.annotation.Managed;
  * @author Apleax
  */
 @Managed(index = -999)
+@Condition(onClass = MinecraftServer.class)
 public class PlayerDisconnectEventListener implements EventListener<@NotNull PlayerDisconnectEvent> {
     private final InstanceManager instanceManager;
 

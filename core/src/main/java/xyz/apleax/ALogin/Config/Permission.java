@@ -12,7 +12,7 @@ import java.util.List;
  * //TODO 权限控制
  *
  * @author Apleax
- * @see xyz.apleax.ALogin.Entity.POJO.PermissionNode PermissionNode
+ * @see xyz.apleax.ALogin.POJO.PermissionNode PermissionNode
  */
 @Managed
 @Condition(onBean = IAccountServiceImpl.class)
