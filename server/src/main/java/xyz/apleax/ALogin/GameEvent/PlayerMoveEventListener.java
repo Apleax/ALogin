@@ -1,8 +1,10 @@
 package xyz.apleax.ALogin.GameEvent;
 
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.event.player.PlayerMoveEvent;
 import org.jetbrains.annotations.NotNull;
+import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
 
 /**
@@ -11,6 +13,7 @@ import org.noear.solon.annotation.Managed;
  * @author Apleax
  */
 @Managed(index = -999)
+@Condition(onClass = MinecraftServer.class)
 public class PlayerMoveEventListener implements EventListener<@NotNull PlayerMoveEvent> {
     @Override
     public @NotNull Class<PlayerMoveEvent> eventType() {

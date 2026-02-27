@@ -1,0 +1,24 @@
+package xyz.apleax.ALogin.ConvertMapper;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
+import org.mapstruct.factory.Mappers;
+import xyz.apleax.ALogin.BO.AccountBO;
+import xyz.apleax.ALogin.BO.LoginBO;
+import xyz.apleax.ALogin.VO.LoginByAccountVO;
+import xyz.apleax.ALogin.VO.LoginByEmailVO;
+import xyz.apleax.ALogin.VO.RegisterVO;
+
+/**
+ * @author Apleax
+ */
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface VOtoBOConvert {
+    VOtoBOConvert INSTANCE = Mappers.getMapper(VOtoBOConvert.class);
+
+    AccountBO registerVOToAccountBO(RegisterVO registerVO);
+
+    LoginBO loginByEmailVOToLoginBO(LoginByEmailVO loginByEmailVO);
+
+    LoginBO loginByAccountVOToLoginBO(LoginByAccountVO loginByAccountVO);
+}

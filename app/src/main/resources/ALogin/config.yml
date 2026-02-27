@@ -1,0 +1,76 @@
+# 服务器名字
+ServerName: QinServer
+
+# 服务端口
+server:
+  # 前端登录地址，用于生成登陆链接
+  address: "https://example.xyz/Login"
+  # 后端服务端口
+  port: 8080
+#  ssl:
+#    keyStore: "classpath:https.jks"
+#    keyPassword: "Apleax133137"
+
+minestom:
+  # 内置Minestom服务端口
+  port: 25565
+  # 登陆成功后跳转服务器地址
+  transfer: "localhost:25566"
+  # 转移服务器使用的CookieKey，与目标服务器配置相对应
+  cookie-key: "alogin"
+
+cross.allow-origin: "*"
+
+solon.logging:
+  appender:
+    # 控制台日志输出级别
+    console:
+      level: INFO
+      enable: true #是否启用
+
+sa-token:
+  # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
+  is-concurrent: false
+  # 是否打印鉴权相关操作日志
+  is-log: false
+
+# 邮箱配置块
+EmailConfig:
+  # 提供邮件发送服务的服务器
+  HostName: "smtp.example.com"
+  # 发件人信息
+  From:
+    # 发件人邮箱
+    Email: "example@example.com"
+    # 发件人昵称
+    Name: "Apleax"
+  # 邮件主题
+  Subject: "A message from Apleax"
+  # 邮件服务器登录认证信息
+  Authentication:
+    UserName: "example@example.com"
+    Password: "your key"
+  # 邮件服务器端口
+  Port: 465
+
+# 数据库配置块
+DataBase:
+  # 填写数据库用户名密码后开启，密钥留空生成密钥和脱敏数据
+  vault:
+    enabled: false
+    password: ""
+  # 可选数据库: MYSQL,SQLSERVER
+  choose: MYSQL
+  host: localhost
+  port: 3306
+  database: alogin
+  username: root
+  password: 123456
+  # 完整的JDBC连接字符串
+  # JDBC连接字符串不为空时，将忽略除 username 与 password 以外的其他数据库配置
+  jdbc: ""
+
+Security:
+  encryption:
+    # 加密算法: SHA256, SHA512, Argon2
+    algorithm: SHA512

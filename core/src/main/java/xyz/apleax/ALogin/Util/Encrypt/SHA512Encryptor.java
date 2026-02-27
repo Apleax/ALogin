@@ -1,6 +1,8 @@
 package xyz.apleax.ALogin.Util.Encrypt;
 
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.encoders.Hex;
+import org.noear.solon.Solon;
 import org.noear.solon.annotation.Managed;
 
 import java.nio.charset.StandardCharsets;
@@ -13,12 +15,22 @@ import java.security.NoSuchProviderException;
  *
  * @author Apleax
  */
+@Slf4j
 @Managed
 public class SHA512Encryptor implements PasswordEncryptor {
     @Override
-    public String encrypt(String password, String salt) throws NoSuchAlgorithmException, NoSuchProviderException {
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA-512", "BC");
-        byte[] digest = messageDigest.digest((password + salt).getBytes(StandardCharsets.UTF_8));
-        return Hex.toHexString(digest);
+    public String encrypt(String password, String salt) {
+        try {
+            MessageDigest messageDigest;
+            messageDigest = MessageDigest.getInstance("SHA-512", "BC");
+            byte[] digest = messageDigest.digest((password + salt).getBytes(StandardCharsets.UTF_8));
+            return Hex.toHexString(digest);
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            log.error("SHA-512 encryption failed, No algorithm or provider can be found", e);
+            Solon.stopBlock();
+        }
+        log.error("Encryption failed");
+        Solon.stopBlock();
+        return null;
     }
 }

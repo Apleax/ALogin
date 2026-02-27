@@ -1,7 +1,7 @@
 package xyz.apleax.ALogin.SQL.Service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import xyz.apleax.ALogin.SQL.PO.AccountPO;
+import xyz.apleax.ALogin.PO.AccountPO;
 
 /**
  * @author Apleax
