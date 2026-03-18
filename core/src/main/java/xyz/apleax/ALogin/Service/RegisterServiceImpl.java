@@ -102,7 +102,7 @@ public class RegisterServiceImpl {
         }
         if (accountBO.getAccount() == null) return null;
         accountBO.setRegistrationTime(System.currentTimeMillis() / 1000);
-        accountBO.setNickName("用户" + accountBO.getAccount());
+        accountBO.setNickName(accountBO.getAccount());
         // 对密码进行哈希
         String salt = RandomStringUtils.generateLowerUpper(32);
         String password = encryptor.encrypt(accountBO.getPassword(), salt);
