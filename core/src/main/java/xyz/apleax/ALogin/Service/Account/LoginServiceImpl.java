@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
@@ -17,11 +17,9 @@ import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
-import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -31,7 +29,7 @@ import java.util.Map;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.login")
+@DamiTopic("account")
 public class LoginServiceImpl {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
@@ -77,18 +75,7 @@ public class LoginServiceImpl {
             case ACCOUNT -> accountIndexCache.get(new AccountIndexCache(AccountType.ACCOUNT, loginPO.getAccount()));
             case QQ_ACCOUNT ->
                     accountIndexCache.get(new AccountIndexCache(AccountType.QQ_ACCOUNT, loginPO.getQq_account()));
+            case UUID -> null;
         };
-    }
-
-
-    @Transaction
-    public GameProfile checkToken(String token) {
-        String account;
-        if (token == null) account = StpUtil.getLoginIdAsString();
-        else account = (String) StpUtil.getLoginIdByToken(token);
-        if (account == null) return null;
-        AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return null;
-        return new GameProfile(accountPO.getMcUuid(), accountPO.getNickName(), Collections.emptyList());
     }
 }

@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -34,7 +34,7 @@ import static xyz.apleax.ALogin.Util.VerifyCodeUtil.checkVerifyCode;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.register")
+@DamiTopic("account")
 public class RegisterServiceImpl {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;

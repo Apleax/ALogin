@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Configuration
 public class BotConnection implements LifecycleBean {
+    @SuppressWarnings("unused")
     private final Serializer<String> serializer = Solon.context().getBean(JacksonStringSerializer.class);
     private SimpleWebSocketClient client;
 
@@ -39,6 +40,7 @@ public class BotConnection implements LifecycleBean {
             @Override
             @SneakyThrows
             public void onMessage(String message) {
+                log.info("BotConnection Received: {}", message);
             }
         };
         client.addHeader("Authorization", "Bearer Apleax133137");

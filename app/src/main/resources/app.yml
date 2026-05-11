@@ -26,6 +26,8 @@ server:
       mimeTypes: 'text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml'
       coreThreads: 0
       maxThreads: 0
+  request:
+    maxFileSize: 20mb
 
 ############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
 sa-token:

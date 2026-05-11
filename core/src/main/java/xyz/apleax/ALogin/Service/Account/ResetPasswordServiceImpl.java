@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -29,7 +29,7 @@ import static xyz.apleax.ALogin.Util.VerifyCodeUtil.checkVerifyCode;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.resetpassword")
+@DamiTopic("account")
 public class ResetPasswordServiceImpl {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;

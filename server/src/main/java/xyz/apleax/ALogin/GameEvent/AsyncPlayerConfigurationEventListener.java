@@ -8,9 +8,11 @@ import net.minestom.server.event.EventListener;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
+import net.minestom.server.instance.SharedInstance;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.MinestomServerInit;
 
 /**
  *
@@ -36,7 +38,9 @@ public class AsyncPlayerConfigurationEventListener implements EventListener<@Not
     @Override
     public @NotNull Result run(@NotNull AsyncPlayerConfigurationEvent event) {
         final Player player = event.getPlayer();
-        event.setSpawningInstance(instanceManager.createSharedInstance(instanceContainer));
+        SharedInstance sharedInstance = instanceManager.createSharedInstance(instanceContainer);
+        MinestomServerInit.playerInstanceMap.put(player.getUuid(), sharedInstance.getUuid());
+        event.setSpawningInstance(sharedInstance);
         player.setRespawnPoint(new Pos(0, 42, 0));
         player.setGameMode(GameMode.ADVENTURE);
         return Result.SUCCESS;

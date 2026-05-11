@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import xyz.apleax.ALogin.Util.VerifyCodeUtil;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.verifycode")
+@DamiTopic("account")
 public class VerifyCodeServiceImpl {
     private final LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;

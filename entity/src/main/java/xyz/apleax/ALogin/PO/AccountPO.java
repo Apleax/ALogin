@@ -3,8 +3,12 @@ package xyz.apleax.ALogin.PO;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import xyz.apleax.ALogin.POJO.GameProfile;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,6 +18,8 @@ import java.util.UUID;
  */
 @Data
 @TableName(value = "account", autoResultMap = true)
+@AllArgsConstructor
+@NoArgsConstructor
 public class AccountPO {
     private Long id;
     /**
@@ -41,6 +47,11 @@ public class AccountPO {
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
     private UUID mcUuid;
+    /**
+     * 玩家档案
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<GameProfile.Property> properties;
     /**
      * 昵称
      */

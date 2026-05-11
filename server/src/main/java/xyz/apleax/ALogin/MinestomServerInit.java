@@ -14,6 +14,9 @@ import org.noear.solon.Solon;
 import org.noear.solon.annotation.*;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -26,6 +29,7 @@ import java.net.InetSocketAddress;
 public class MinestomServerInit {
     @Inject("${minestom.port:25565}")
     private static Integer port;
+    public static Map<UUID, UUID> playerInstanceMap = new ConcurrentHashMap<>(50);
 
     @Init
     public void init() {

@@ -18,9 +18,8 @@ import xyz.apleax.ALogin.BO.AccountBO;
 import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Enum.AccountType;
-import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Service.*;
+import xyz.apleax.ALogin.Service.AccountService;
 import xyz.apleax.ALogin.VO.*;
 
 import java.util.Map;
@@ -36,11 +35,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Mapping(path = "/api/web/account", produces = "application/json", consumes = "application/json")
 public class Account {
-    private final RegisterService registerService;
-    private final LoginService loginService;
-    private final VerifyCodeService verifyCodeService;
-    private final LogoutService logoutService;
-    private final ResetPasswordService resetPasswordService;
+    private final AccountService accountService;
 
     @SaIgnore
     @Transaction
@@ -49,7 +44,7 @@ public class Account {
     public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context) {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
-        return registerService.register(accountBO, verify_code, context.realIp());
+        return accountService.register(accountBO, verify_code, context.realIp());
     }
 
     @SaIgnore
@@ -62,7 +57,7 @@ public class Account {
             verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), registerVerifyCodeVO.getType());
         if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO)
             verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), resetPasswordVerifyCodeVO.getType());
-        return verifyCodeService.verifyCode(verifyCodeKey);
+        return accountService.verifyCode(verifyCodeKey);
     }
 
     @SaIgnore
@@ -80,22 +75,14 @@ public class Account {
             loginBO.setAccount_type(AccountType.ACCOUNT);
         }
         if (loginBO != null) loginBO.setReal_ip(Context.current().realIp());
-        return loginService.login(loginBO, token);
-    }
-
-    @SaIgnore
-    @Transaction
-    @Mapping(path = "/CheckToken", method = MethodType.POST,
-            name = "校验Token", description = "校验Token并获取玩家配置")
-    public GameProfile CheckToken(String token) {
-        return loginService.checkToken(token);
+        return accountService.login(loginBO, token);
     }
 
     @Transaction
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")
     public Result<SaTokenInfo> Logout(String token) {
-        return logoutService.logout(token);
+        return accountService.logout(token);
     }
 
     @SaIgnore
@@ -103,7 +90,7 @@ public class Account {
     @Mapping(path = "/ResetPassword", method = MethodType.POST,
             name = "重置密码", description = "重置密码接口")
     public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) {
-        return resetPasswordService.resetPassword(resetPasswordVO.getEmail(),
+        return accountService.resetPassword(resetPasswordVO.getEmail(),
                 resetPasswordVO.getVerify_code(),
                 resetPasswordVO.getNew_password());
     }

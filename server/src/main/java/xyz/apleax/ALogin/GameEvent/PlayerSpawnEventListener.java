@@ -40,7 +40,7 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
         String token = SaTempUtil.createToken(player.getUuid(), Duration.ofMinutes(5).getSeconds(), true);
         String link = Solon.cfg().get("server.address");
         if (!link.endsWith("/")) link += "/";
-        TextComponent linkComponent = Component.text("[登录]", TextColor.color(152, 251, 152))
+        TextComponent linkComponent = Component.text("[打开聊天框，点击此处登录]", TextColor.color(152, 251, 152))
                 .clickEvent(ClickEvent.openUrl(link + token));
         Scheduler scheduler = player.scheduler();
         scheduler.submitTask(() -> {

@@ -13,6 +13,7 @@ import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 
 import java.io.IOException;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
@@ -44,6 +45,20 @@ public final class VerifyCodeUtil {
     @Inject("VerifyCode")
     private static LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
 
+    private static final String appName = Solon.cfg().appName();
+    private static final URL emailTemplateFile = ResourceUtil.getResourceByFile("./" + appName + "/email/RegVerifyCode.html");
+    private static String VCodeHTML;
+
+    static {
+        try {
+            if (emailTemplateFile == null)
+                VCodeHTML = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/RegVerifyCode.html");
+            else VCodeHTML = ResourceUtil.getResourceAsString(emailTemplateFile);
+        } catch (IOException e) {
+            log.error("IOException: {}", e.getMessage());
+        }
+    }
+
     /**
      * 构建邮件发送
      *
@@ -52,27 +67,22 @@ public final class VerifyCodeUtil {
      * @author Apleax
      */
     public static void sendAsync(String email, String verifyCode) {
-        try {
-            String VCodeHTML = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/RegVerifyCode.html")
-                    .replace("<servername/>", Server)
-                    .replace("<generatedcode/>", verifyCode)
-                    .replace("<time/>", LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
-            CompletableFuture<Void> resultFuture = mailer.sendMail(
-                    EmailBuilder
-                            .startingBlank()
-                            .from(FromName, FromEmail)
-                            .withSubject(Subject)
-                            .to(email)
-                            .withHTMLText(VCodeHTML)
-                            .buildEmail()
-                    , true);
-            resultFuture.whenComplete((_, throwable) -> {
-                if (throwable != null) log.warn("邮件发送失败，收件人: {}，原因: {}", email, throwable.getMessage());
-                else log.debug("邮件发送成功，收件人: {}", email);
-            });
-        } catch (IOException e) {
-            log.error("IOException: {}", e.getMessage());
-        }
+        VCodeHTML = VCodeHTML.replace("<servername/>", Server)
+                .replace("<generatedcode/>", verifyCode)
+                .replace("<time/>", LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
+        CompletableFuture<Void> resultFuture = mailer.sendMail(
+                EmailBuilder
+                        .startingBlank()
+                        .from(FromName, FromEmail)
+                        .withSubject(Subject)
+                        .to(email)
+                        .withHTMLText(VCodeHTML)
+                        .buildEmail()
+                , true);
+        resultFuture.whenComplete((_, throwable) -> {
+            if (throwable != null) log.warn("邮件发送失败，收件人: {}，原因: {}", email, throwable.getMessage());
+            else log.debug("邮件发送成功，收件人: {}", email);
+        });
     }
 
     /**

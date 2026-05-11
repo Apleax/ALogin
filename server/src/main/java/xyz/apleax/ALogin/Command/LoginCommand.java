@@ -50,13 +50,9 @@ public class LoginCommand extends Command {
         ArgumentString email = ArgumentType.String("'邮箱'");
         ArgumentString password = ArgumentType.String("'密码'");
 
-        email.setCallback((sender, _) -> {
-            sender.sendMessage("用法: /l '<邮箱>' '<密码>'");
-        });
+        email.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
 
-        password.setCallback((sender, _) -> {
-            sender.sendMessage("用法: /l '<邮箱>' '<密码>'");
-        });
+        password.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
 
         addSyntax((sender, context) -> {
             String emailStr = context.get(email);
@@ -66,6 +62,10 @@ public class LoginCommand extends Command {
                 return;
             }
             String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, emailStr));
+            if (account == null) {
+                sender.sendMessage(AccountType.EMAIL.getValue() + "不存在");
+                return;
+            }
             Player player = null;
             if (sender instanceof Player) player = (Player) sender;
             if (player == null) return;

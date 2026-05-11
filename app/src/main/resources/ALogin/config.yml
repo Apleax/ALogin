@@ -18,6 +18,8 @@ minestom:
   transfer: "localhost:25566"
   # 转移服务器使用的CookieKey，与目标服务器配置相对应
   cookie-key: "alogin"
+  # MineSkinApiKey 用于服务器皮肤支持
+  mineskin-api-key: ""
 
 cross.allow-origin: "*"
 
