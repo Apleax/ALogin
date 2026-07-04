@@ -47,13 +47,13 @@ public final class VerifyCodeUtil {
 
     private static final String appName = Solon.cfg().appName();
     private static final URL emailTemplateFile = ResourceUtil.getResourceByFile("./" + appName + "/email/RegVerifyCode.html");
-    private static String VCodeHTML;
+    private static String EmailTemplate;
 
     static {
         try {
             if (emailTemplateFile == null)
-                VCodeHTML = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/RegVerifyCode.html");
-            else VCodeHTML = ResourceUtil.getResourceAsString(emailTemplateFile);
+                EmailTemplate = ResourceUtil.getResourceAsString(Solon.cfg().appName() + "/email/RegVerifyCode.html");
+            else EmailTemplate = ResourceUtil.getResourceAsString(emailTemplateFile);
         } catch (IOException e) {
             log.error("IOException: {}", e.getMessage());
         }
@@ -67,7 +67,7 @@ public final class VerifyCodeUtil {
      * @author Apleax
      */
     public static void sendAsync(String email, String verifyCode) {
-        VCodeHTML = VCodeHTML.replace("<servername/>", Server)
+        String VCodeHTML = EmailTemplate.replace("<servername/>", Server)
                 .replace("<generatedcode/>", verifyCode)
                 .replace("<time/>", LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
         CompletableFuture<Void> resultFuture = mailer.sendMail(

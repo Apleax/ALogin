@@ -11,6 +11,7 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.timer.Scheduler;
+import net.minestom.server.timer.Task;
 import net.minestom.server.timer.TaskSchedule;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.Solon;
@@ -43,10 +44,15 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
         TextComponent linkComponent = Component.text("[打开聊天框，点击此处登录]", TextColor.color(152, 251, 152))
                 .clickEvent(ClickEvent.openUrl(link + token));
         Scheduler scheduler = player.scheduler();
-        scheduler.submitTask(() -> {
+        Task tips = scheduler.submitTask(() -> {
             player.sendMessage(linkComponent);
             return TaskSchedule.seconds(10);
         });
+        scheduler.scheduleTask(() -> {
+            player.kick(Component.text("您已超过5分钟未登录"));
+            tips.cancel();
+            return TaskSchedule.stop();
+        }, TaskSchedule.duration(Duration.ofMinutes(5)));
         return Result.SUCCESS;
     }
 }
