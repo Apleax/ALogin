@@ -82,7 +82,7 @@ public record Settings(
         String identityAudience = textOrDefault(properties, "identity-audience", DEFAULT_IDENTITY_AUDIENCE);
         String identitySharedSecret = properties.getProperty("identity-shared-secret", "").trim();
         long identityAssertionTtl = parseSeconds(properties, "identity-assertion-ttl-seconds", 60, logger);
-        if (identitySharedSecret.length() < 16) identityEnabled = false;
+        if (identitySharedSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) identityEnabled = false;
 
         Settings settings = new Settings(
                 bedrockAddress,

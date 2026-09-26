@@ -3,12 +3,14 @@ package xyz.apleax.ALogin.Identity;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Managed;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /**
  * 外部身份信任边界配置。
  *
- * <p>默认关闭。生产环境必须通过外部配置提供共享密钥，不能把密钥提交到仓库。</p>
+ * <p>Java 与 Bedrock 使用彼此隔离的密钥。默认关闭；生产环境必须通过外部配置提供至少 32 字节密钥，
+ * 不能把密钥提交到仓库。</p>
  *
  * @author Apleax
  */
@@ -23,7 +25,8 @@ public final class IdentityConfig {
     private final boolean enabled;
     private final String issuer;
     private final String audience;
-    private final String sharedSecret;
+    private final String javaSharedSecret;
+    private final String bedrockSharedSecret;
     private final String cookieKey;
     private final Duration clockSkew;
     private final Duration assertionMaxLifetime;
@@ -32,7 +35,8 @@ public final class IdentityConfig {
         this.enabled = Solon.cfg().getBool("identity.enabled", false);
         this.issuer = text(Solon.cfg().get("identity.issuer", DEFAULT_ISSUER), DEFAULT_ISSUER);
         this.audience = text(Solon.cfg().get("identity.audience", DEFAULT_AUDIENCE), DEFAULT_AUDIENCE);
-        this.sharedSecret = text(Solon.cfg().get("identity.shared-secret", ""), "");
+        this.javaSharedSecret = text(Solon.cfg().get("identity.java-shared-secret", ""), "");
+        this.bedrockSharedSecret = text(Solon.cfg().get("identity.bedrock-shared-secret", ""), "");
         this.cookieKey = text(Solon.cfg().get("identity.cookie-key", DEFAULT_COOKIE_KEY), DEFAULT_COOKIE_KEY);
         this.clockSkew = nonNegativeSeconds(
                 Solon.cfg().getInt("identity.clock-skew-seconds", 15), DEFAULT_CLOCK_SKEW);
@@ -56,7 +60,26 @@ public final class IdentityConfig {
 
     public boolean enabled() {
         return enabled && !issuer.isBlank() && !audience.isBlank() && !cookieKey.isBlank()
-                && sharedSecret.length() >= 16;
+                && (enabledFor(ExternalIdentityProvider.JAVA_MOJANG)
+                || enabledFor(ExternalIdentityProvider.BEDROCK_XUID));
+    }
+
+    public boolean enabledFor(ExternalIdentityProvider provider) {
+        return provider != null && secretFor(provider) != null;
+    }
+
+    public String secretFor(ExternalIdentityProvider provider) {
+        if (provider == ExternalIdentityProvider.JAVA_MOJANG) {
+            return validSecret(javaSharedSecret) ? javaSharedSecret : null;
+        }
+        if (provider == ExternalIdentityProvider.BEDROCK_XUID) {
+            return validSecret(bedrockSharedSecret) ? bedrockSharedSecret : null;
+        }
+        return null;
+    }
+
+    private static boolean validSecret(String secret) {
+        return secret != null && secret.getBytes(StandardCharsets.UTF_8).length >= 32;
     }
 
     public String issuer() {
@@ -67,8 +90,12 @@ public final class IdentityConfig {
         return audience;
     }
 
-    public String sharedSecret() {
-        return sharedSecret;
+    public String javaSharedSecret() {
+        return javaSharedSecret;
+    }
+
+    public String bedrockSharedSecret() {
+        return bedrockSharedSecret;
     }
 
     public String cookieKey() {

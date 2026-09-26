@@ -28,7 +28,9 @@ identity:
   locale: "zh-CN"
   issuer: "ALogin"
   audience: "ALogin"
-  shared-secret: ""
+  # Java 与 Bedrock 必须使用两份不同的随机密钥，每份至少 32 个 UTF-8 字节。
+  java-shared-secret: ""
+  bedrock-shared-secret: ""
   cookie-key: "alogin:identity"
   clock-skew-seconds: 15
   assertion-max-seconds: 60

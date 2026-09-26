@@ -23,6 +23,7 @@ public final class IdentityAssertionCodec {
     private static final int FIELD_COUNT = 10;
     private static final int MAX_TOKEN_LENGTH = 4096;
     private static final int MAX_TEXT_LENGTH = 512;
+    private static final int MAX_JTI_LENGTH = 128;
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
@@ -51,6 +52,7 @@ public final class IdentityAssertionCodec {
         }
         if (jti == null || jti.isBlank()) jti = UUID.randomUUID().toString();
         requireText(jti, "jti");
+        if (jti.length() > MAX_JTI_LENGTH) throw new IllegalArgumentException("jti is too long");
 
         Instant expiresAt = issuedAt.plus(lifetime);
         String payload = String.join(".",
@@ -71,6 +73,7 @@ public final class IdentityAssertionCodec {
             String sharedSecret,
             String expectedIssuer,
             String expectedAudience,
+            ExternalIdentityProvider expectedProvider,
             Instant now,
             Duration clockSkew,
             Duration maxLifetime
@@ -106,11 +109,15 @@ public final class IdentityAssertionCodec {
         }
 
         ExternalIdentityProvider provider = ExternalIdentityProvider.parse(fields[3]);
+        if (expectedProvider != null && provider != expectedProvider) {
+            throw new IllegalArgumentException("unexpected identity assertion provider");
+        }
         String subject = decode(fields[4], "subject");
         String displayName = decodeOptional(fields[5], "displayName");
         long issuedSeconds = parseEpoch(fields[6], "issuedAt");
         long expiresSeconds = parseEpoch(fields[7], "expiresAt");
         String jti = decode(fields[8], "jti");
+        if (jti.length() > MAX_JTI_LENGTH) throw new IllegalArgumentException("jti is too long");
         Instant issuedAt = Instant.ofEpochSecond(issuedSeconds);
         Instant expiresAt = Instant.ofEpochSecond(expiresSeconds);
         if (!expiresAt.isAfter(issuedAt) || Duration.between(issuedAt, expiresAt).compareTo(maxLifetime) > 0) {
@@ -129,6 +136,34 @@ public final class IdentityAssertionCodec {
                 issuedAt,
                 expiresAt,
                 jti);
+    }
+
+    public static IdentityAssertion verify(
+            String token,
+            String sharedSecret,
+            String expectedIssuer,
+            String expectedAudience,
+            Instant now,
+            Duration clockSkew,
+            Duration maxLifetime
+    ) {
+        return verify(token, sharedSecret, expectedIssuer, expectedAudience, null,
+                now, clockSkew, maxLifetime);
+    }
+
+    /**
+     * Reads the provider field only to select its isolated verification key. The returned value is untrusted
+     * until the assertion signature has been verified by {@link #verify}.
+     */
+    public static ExternalIdentityProvider providerFromUnverified(String token) {
+        if (token == null || token.isBlank() || token.length() > MAX_TOKEN_LENGTH) {
+            throw new IllegalArgumentException("invalid identity assertion");
+        }
+        String[] fields = token.split("\\.", -1);
+        if (fields.length != FIELD_COUNT || !VERSION.equals(fields[0])) {
+            throw new IllegalArgumentException("invalid identity assertion format");
+        }
+        return ExternalIdentityProvider.parse(fields[3]);
     }
 
     private static byte[] sign(String payload, String sharedSecret) {
@@ -186,8 +221,9 @@ public final class IdentityAssertionCodec {
     }
 
     private static void requireSecret(String sharedSecret) {
-        if (sharedSecret == null || sharedSecret.isBlank() || sharedSecret.length() < 16) {
-            throw new IllegalArgumentException("identity shared secret must contain at least 16 characters");
+        if (sharedSecret == null || sharedSecret.isBlank()
+                || sharedSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException("identity shared secret must contain at least 32 UTF-8 bytes");
         }
     }
 

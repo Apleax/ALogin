@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class IdentityAssertionCodecTest {
-    private static final String SECRET = "test-shared-secret-20260926";
+    private static final String SECRET = "test-shared-secret-20260926-32-bytes";
     private static final Instant NOW = Instant.parse("2026-09-26T12:00:00Z");
 
     @Test
@@ -54,5 +54,18 @@ class IdentityAssertionCodecTest {
 
         assertThrows(IllegalArgumentException.class, () -> IdentityAssertionCodec.verify(
                 token, SECRET, "geyser", "ALogin", NOW.plusSeconds(12), Duration.ZERO, Duration.ofMinutes(1)));
+    }
+
+    @Test
+    void rejectsUsingTheOtherProviderSecret() {
+        String token = IdentityAssertionCodec.issue(
+                new VerifiedIdentity(ExternalIdentityProvider.BEDROCK_XUID,
+                        "2535400000000000", "Player", "geyser"),
+                "geyser", "ALogin", SECRET, NOW, Duration.ofSeconds(30), "jti-4");
+
+        assertThrows(IllegalArgumentException.class, () -> IdentityAssertionCodec.verify(
+                token, "other-shared-secret-20260926-32-bytes", "geyser", "ALogin",
+                ExternalIdentityProvider.BEDROCK_XUID,
+                NOW, Duration.ZERO, Duration.ofMinutes(1)));
     }
 }

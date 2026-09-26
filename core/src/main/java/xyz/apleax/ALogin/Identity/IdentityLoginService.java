@@ -17,6 +17,7 @@ import xyz.apleax.ALogin.Identity.VerifiedIdentity;
 import xyz.apleax.ALogin.PO.AccountIdentityPO;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.SQL.Service.IAccountIdentityService;
+import xyz.apleax.ALogin.SQL.Service.IIdentityAssertionReplayService;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 
 import java.time.Instant;
@@ -36,19 +37,21 @@ public class IdentityLoginService {
     private final IAccountIdentityService identityService;
     private final IAccountService accountService;
     private final IdentityConfig config;
-    private final Cache<String, Boolean> consumedJti;
+    private final IIdentityAssertionReplayService replayService;
+    private final Cache<String, Boolean> replayCleanup = Caffeine.newBuilder()
+            .maximumSize(1)
+            .expireAfterWrite(java.time.Duration.ofMinutes(5))
+            .build();
 
     public IdentityLoginService(
             @Ds("DataBase") IAccountIdentityService identityService,
             @Ds("DataBase") IAccountService accountService,
+            @Ds("DataBase") IIdentityAssertionReplayService replayService,
             IdentityConfig config) {
         this.identityService = identityService;
         this.accountService = accountService;
         this.config = config;
-        this.consumedJti = Caffeine.newBuilder()
-                .maximumSize(20_000)
-                .expireAfterWrite(config.assertionMaxLifetime().plus(config.clockSkew()))
-                .build();
+        this.replayService = replayService;
     }
 
     /**
@@ -59,11 +62,15 @@ public class IdentityLoginService {
                 "identity.error.disabled", "外部身份登录未启用或共享密钥未配置");
         IdentityAssertion assertion;
         try {
+            ExternalIdentityProvider provider = IdentityAssertionCodec.providerFromUnverified(token);
+            String secret = config.secretFor(provider);
+            if (secret == null) throw new IllegalArgumentException("identity provider is disabled");
             assertion = IdentityAssertionCodec.verify(
                     token,
-                    config.sharedSecret(),
+                    secret,
                     config.issuer(),
                     config.audience(),
+                    provider,
                     Instant.now(),
                     config.clockSkew(),
                     config.assertionMaxLifetime());
@@ -71,8 +78,16 @@ public class IdentityLoginService {
             throw new IdentityBindingException(
                     "identity.error.assertion-invalid", "外部身份断言无效", exception);
         }
-        if (consumedJti.asMap().putIfAbsent(assertion.jti(), Boolean.TRUE) != null) {
-            throw new IdentityBindingException("identity.error.assertion-replayed", "外部身份断言已使用");
+        try {
+            cleanupReplayRecords();
+            if (!replayService.consumeOnce(assertion.jti(), assertion.expiresAt().toEpochMilli())) {
+                throw new IdentityBindingException("identity.error.assertion-replayed", "外部身份断言已使用");
+            }
+        } catch (IdentityBindingException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new IdentityBindingException(
+                    "identity.error.replay-store-unavailable", "外部身份断言防重放存储不可用", exception);
         }
 
         AccountIdentityPO binding = identityService.getOne(new LambdaQueryWrapper<AccountIdentityPO>()
@@ -195,6 +210,12 @@ public class IdentityLoginService {
         return provider == ExternalIdentityProvider.JAVA_MOJANG
                 ? normalized.toLowerCase(java.util.Locale.ROOT)
                 : normalized;
+    }
+
+    private void cleanupReplayRecords() {
+        if (replayCleanup.getIfPresent("done") != null) return;
+        replayService.removeExpired(System.currentTimeMillis());
+        replayCleanup.put("done", Boolean.TRUE);
     }
 
     public record IdentityResolution(
