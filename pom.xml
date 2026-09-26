@@ -25,6 +25,7 @@
         <module>core</module>
         <module>server</module>
         <module>entity</module>
+        <module>geyser-extension</module>
     </modules>
 
     <!-- 依赖版本 -->
