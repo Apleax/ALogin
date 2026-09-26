@@ -15,6 +15,11 @@
     <dependencies>
         <dependency>
             <groupId>xyz.apleax</groupId>
+            <artifactId>ALogin-identity-protocol</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>xyz.apleax</groupId>
             <artifactId>ALogin-entity</artifactId>
             <version>${project.parent.version}</version>
         </dependency>

@@ -20,6 +20,7 @@
     <description>适配MC的统一单点登录中心</description>
 
     <modules>
+        <module>identity-protocol</module>
         <module>app</module>
         <module>core</module>
         <module>server</module>
