@@ -21,6 +21,18 @@ minestom:
   # MineSkinApiKey 用于服务器皮肤支持
   mineskin-api-key: ""
 
+# 外部身份免密码登录（默认关闭）
+# 入口适配器和 ALogin 必须使用同一共享密钥；密钥只放在服务器外部配置，不要提交到仓库。
+identity:
+  enabled: false
+  locale: "zh-CN"
+  issuer: "ALogin"
+  audience: "ALogin"
+  shared-secret: ""
+  cookie-key: "alogin:identity"
+  clock-skew-seconds: 15
+  assertion-max-seconds: 60
+
 cross.allow-origin: "*"
 
 solon.logging:

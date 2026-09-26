@@ -4,15 +4,15 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.temp.SaTempUtil;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
-import net.minestom.server.network.packet.server.common.TransferPacket;
 import org.noear.dami2.bus.Event;
 import org.noear.dami2.bus.EventListener;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.Identity.LoginTransferService;
+import xyz.apleax.ALogin.Identity.PlayerLoginState;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,8 +25,13 @@ import java.util.UUID;
 @Managed
 @Condition(onClass = MinecraftServer.class)
 public class LoginEventListener implements EventListener<Map<String, String>> {
-    private static final String transfer = Solon.cfg().get("minestom.transfer");
-    private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
+    private final PlayerLoginState loginState;
+    private final LoginTransferService transferService;
+
+    public LoginEventListener(PlayerLoginState loginState, LoginTransferService transferService) {
+        this.loginState = loginState;
+        this.transferService = transferService;
+    }
 
     @Override
     public void onEvent(Event<Map<String, String>> event) {
@@ -35,17 +40,8 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
         if (value == null) return;
         Player player = MinecraftServer.getConnectionManager().getOnlinePlayerByUuid(value);
         if (player == null) return;
-        String address;
-        int port;
-        if (transfer.contains(":")) {
-            address = transfer.split(":")[0];
-            port = Integer.parseInt(transfer.split(":")[1]);
-        } else {
-            address = transfer;
-            port = 25565;
-        }
-        player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
-        player.sendPacket(new TransferPacket(address, port));
+        loginState.markLoggedIn(player.getUuid(), map.get("account"));
+        transferService.transfer(player, map.get("account"));
         SaTempUtil.deleteToken(map.get("token"));
     }
 }

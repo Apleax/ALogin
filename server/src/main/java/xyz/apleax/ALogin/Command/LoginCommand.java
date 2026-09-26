@@ -10,20 +10,19 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentString;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.entity.Player;
-import net.minestom.server.network.packet.server.common.TransferPacket;
 import org.jetbrains.annotations.NotNull;
-import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Identity.LoginTransferService;
+import xyz.apleax.ALogin.Identity.PlayerLoginState;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
@@ -36,14 +35,18 @@ import java.util.regex.Pattern;
 @Condition(onClass = MinecraftServer.class)
 public class LoginCommand extends Command {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9\\u4e00-\\u9fa5]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$");
-    private static final String transfer = Solon.cfg().get("minestom.transfer");
-    private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
+    private final PlayerLoginState loginState;
+    private final LoginTransferService transferService;
 
     public LoginCommand(@Ds("DataBase") IAccountService accountService,
                         @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
                         @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
-                        @Inject("Algorithm") PasswordEncryptor encryptor) {
+                        @Inject("Algorithm") PasswordEncryptor encryptor,
+                        PlayerLoginState loginState,
+                        LoginTransferService transferService) {
         super("login", "l");
+        this.loginState = loginState;
+        this.transferService = transferService;
 
         setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
 
@@ -86,17 +89,8 @@ public class LoginCommand extends Command {
                     .eq(AccountPO::getAccount, accountPO.getAccount())));
             if (updated) accountCache.put(accountPO.getAccount(), accountPO);
             else log.warn("Failed to update last login time for account: {}", accountPO.getAccount());
-            String address;
-            int port;
-            if (transfer.contains(":")) {
-                address = transfer.split(":")[0];
-                port = Integer.parseInt(transfer.split(":")[1]);
-            } else {
-                address = transfer;
-                port = 25565;
-            }
-            player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(account).getBytes(StandardCharsets.UTF_8));
-            player.sendPacket(new TransferPacket(address, port));
+            loginState.markLoggedIn(player.getUuid(), accountPO.getAccount());
+            transferService.transfer(player, accountPO.getAccount());
         }, email, password);
     }
 

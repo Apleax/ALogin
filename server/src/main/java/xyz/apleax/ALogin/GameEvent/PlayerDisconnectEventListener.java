@@ -8,6 +8,8 @@ import net.minestom.server.instance.InstanceManager;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.Identity.IdentityCookieLoginEventListener;
+import xyz.apleax.ALogin.Identity.PlayerLoginState;
 import xyz.apleax.ALogin.MinestomServerInit;
 
 import java.util.Optional;
@@ -21,9 +23,15 @@ import java.util.Optional;
 @Condition(onClass = MinecraftServer.class)
 public class PlayerDisconnectEventListener implements EventListener<@NotNull PlayerDisconnectEvent> {
     private final InstanceManager instanceManager;
+    private final PlayerLoginState loginState;
+    private final IdentityCookieLoginEventListener identityCookieLogin;
 
-    public PlayerDisconnectEventListener(InstanceManager instanceManager) {
+    public PlayerDisconnectEventListener(InstanceManager instanceManager,
+                                         PlayerLoginState loginState,
+                                         IdentityCookieLoginEventListener identityCookieLogin) {
         this.instanceManager = instanceManager;
+        this.loginState = loginState;
+        this.identityCookieLogin = identityCookieLogin;
     }
 
     @Override
@@ -38,6 +46,8 @@ public class PlayerDisconnectEventListener implements EventListener<@NotNull Pla
                                 .get(event.getPlayer().getUuid())))
                 .ifPresent(instanceManager::unregisterInstance);
         MinestomServerInit.playerInstanceMap.remove(event.getPlayer().getUuid());
+        loginState.remove(event.getPlayer().getUuid());
+        identityCookieLogin.forget(event.getPlayer().getUuid());
         SaTempUtil.getTempTokenList(event.getPlayer().getUuid()).forEach(
                 SaTempUtil::deleteToken
         );
