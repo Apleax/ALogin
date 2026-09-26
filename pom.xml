@@ -26,6 +26,7 @@
         <module>server</module>
         <module>entity</module>
         <module>geyser-extension</module>
+        <module>velocity-adapter</module>
     </modules>
 
     <!-- 依赖版本 -->
@@ -230,6 +231,17 @@
         <repository>
             <id>inventive-repo</id>
             <url>https://repo.inventivetalent.org/repository/public/</url>
+        </repository>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>kyngs-repo-public</id>
+            <url>https://repo.kyngs.xyz/public/</url>
         </repository>
     </repositories>
 
