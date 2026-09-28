@@ -22,8 +22,9 @@
 
 本项目使用以下工具和技术进行开发：
 
-- [**Java 21**](https://www.oracle.com/cn/java/) - 作为主要开发语言
+- [**Java 25**](https://www.oracle.com/cn/java/) - 作为主要开发语言
 - [**Solon**](https://solon.noear.org/) - 用于构建 RESTful API 服务
 - [**Maven**](https://maven.apache.org/) - 项目依赖管理和构建工具
 - [**JUnit 5**](https://junit.org/) - 单元测试框架
 - [**ApiFox**](https://apifox.com/) - API 测试工具
+

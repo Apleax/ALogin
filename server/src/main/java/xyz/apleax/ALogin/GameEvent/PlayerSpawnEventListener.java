@@ -11,6 +11,7 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.timer.Scheduler;
+import net.minestom.server.timer.Task;
 import net.minestom.server.timer.TaskSchedule;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.Solon;
@@ -40,13 +41,22 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
         String token = SaTempUtil.createToken(player.getUuid(), Duration.ofMinutes(5).getSeconds(), true);
         String link = Solon.cfg().get("server.address");
         if (!link.endsWith("/")) link += "/";
-        TextComponent linkComponent = Component.text("[登录]", TextColor.color(152, 251, 152))
-                .clickEvent(ClickEvent.openUrl(link + token));
+        TextComponent linkComponent = Component.text().append(
+                Component.text("[打开聊天框，点击此处登录]", TextColor.color(195, 87, 219)).clickEvent(ClickEvent.openUrl(link + token)).appendNewline()
+        ).append(
+                Component.text("无法打开网页或使用基岩版时可使用指令: /l [邮箱] [密码登录]", TextColor.color(152, 251, 152)).appendNewline()
+        ).build();
+
         Scheduler scheduler = player.scheduler();
-        scheduler.submitTask(() -> {
+        Task tips = scheduler.submitTask(() -> {
             player.sendMessage(linkComponent);
             return TaskSchedule.seconds(10);
         });
+        scheduler.scheduleTask(() -> {
+            player.kick(Component.text("您已超过5分钟未登录"));
+            tips.cancel();
+            return TaskSchedule.stop();
+        }, TaskSchedule.duration(Duration.ofMinutes(5)));
         return Result.SUCCESS;
     }
 }

@@ -17,7 +17,9 @@ import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * 所有的缓存配置
@@ -27,7 +29,13 @@ import java.time.Duration;
 @Slf4j
 @Configuration
 public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) implements LifecycleBean {
-    public static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，值为 '{}'，原因：{}";
+    private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，值为 '{}'，原因：{}";
+
+    private static final String API_TEMPLATE = "https://www.badqin.top/luckperms/%s";
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
 
     private static void onRemoval(Object key, Object value, RemovalCause cause) {
         log.debug(CACHE_REMOVED_SIMPLE, key, value, cause);
@@ -82,9 +90,34 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                         case ACCOUNT -> queryWrapper.eq(AccountPO::getAccount, Type.value());
                         case EMAIL -> queryWrapper.eq(AccountPO::getEmail, Type.value());
                         case QQ_ACCOUNT -> queryWrapper.eq(AccountPO::getQqAccount, Type.value());
+                        case UUID -> queryWrapper.eq(AccountPO::getMcUuid, "\"" + Type.value() + "\"");
                     }
                     if (!accountService.exists(queryWrapper)) return null;
                     return accountService.getOne(queryWrapper).getAccount();
                 });
+    }
+
+    //TODO 角色缓存
+    public LoadingCache<@NotNull String, List<String>> RoleCache() {
+        return Caffeine.newBuilder()
+                .removalListener(CaffeineConfig::onRemoval)
+                .maximumSize(10_000)
+                .initialCapacity(2000)
+                .expireAfterAccess(Duration.ofHours(12))
+                .refreshAfterWrite(Duration.ofHours(1))
+                .recordStats()
+                .build(key -> null);
+    }
+
+    //TODO 权限缓存
+    public LoadingCache<@NotNull String, List<String>> PermissionCache() {
+        return Caffeine.newBuilder()
+                .removalListener(CaffeineConfig::onRemoval)
+                .maximumSize(10_000)
+                .initialCapacity(2000)
+                .expireAfterAccess(Duration.ofHours(12))
+                .refreshAfterWrite(Duration.ofHours(1))
+                .recordStats()
+                .build(key -> null);
     }
 }

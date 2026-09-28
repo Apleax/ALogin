@@ -68,7 +68,7 @@
         <!-- 摘要算法 -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk18on</artifactId>
+            <artifactId>bcprov-jdk18on</artifactId>
             <version>${bcpkix.version}</version>
         </dependency>
         <!-- 数据脱敏 -->
@@ -76,8 +76,14 @@
             <groupId>org.noear</groupId>
             <artifactId>solon-security-vault</artifactId>
         </dependency>
+        <!-- hutool-crypto -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-crypto</artifactId>
+            <version>${hutool-crypto.version}</version>
+        </dependency>
     </dependencies>
-    
+
     <build>
         <finalName>${project.artifactId}-${project.parent.version}</finalName>
     </build>

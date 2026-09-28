@@ -11,7 +11,8 @@ import lombok.Getter;
 public enum AccountType {
     ACCOUNT("account", "账号"),
     EMAIL("email", "邮箱"),
-    QQ_ACCOUNT("qq_account", "QQ号");
+    QQ_ACCOUNT("qq_account", "QQ号"),
+    UUID("mc_uuid", "MCUUID");
     private final String key;
     private final String value;
 
@@ -20,11 +21,13 @@ public enum AccountType {
         this.value = value;
     }
 
+    @SuppressWarnings("unused")
     public static AccountType getValueByKey(String key) {
         for (AccountType value : values()) if (value.key.equals(key)) return value;
         return null;
     }
 
+    @SuppressWarnings("unused")
     public static String getKeyByValue(AccountType value) {
         for (AccountType v : values()) if (v.equals(value)) return v.key;
         return null;

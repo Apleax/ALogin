@@ -1,6 +1,5 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
-import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.dami2.solon.annotation.DamiTopic;
@@ -15,11 +14,13 @@ import org.noear.solon.data.annotation.Transaction;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.logout")
+@DamiTopic("account")
 public class LogoutServiceImpl {
     @Transaction
-    public Result<SaTokenInfo> logout(String token) {
+    public Result<Void> logout(String token) {
+        String account = StpUtil.getLoginIdAsString();
         StpUtil.logout();
+        log.info("登出成功，account={}", account);
         return Result.succeed();
     }
 }

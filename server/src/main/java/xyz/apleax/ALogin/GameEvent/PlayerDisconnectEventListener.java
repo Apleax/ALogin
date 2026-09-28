@@ -8,6 +8,9 @@ import net.minestom.server.instance.InstanceManager;
 import org.jetbrains.annotations.NotNull;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.MinestomServerInit;
+
+import java.util.Optional;
 
 /**
  *
@@ -30,7 +33,11 @@ public class PlayerDisconnectEventListener implements EventListener<@NotNull Pla
 
     @Override
     public @NotNull Result run(@NotNull PlayerDisconnectEvent event) {
-        instanceManager.unregisterInstance(event.getPlayer().getInstance());
+        Optional.ofNullable(instanceManager.getInstance(
+                        MinestomServerInit.playerInstanceMap
+                                .get(event.getPlayer().getUuid())))
+                .ifPresent(instanceManager::unregisterInstance);
+        MinestomServerInit.playerInstanceMap.remove(event.getPlayer().getUuid());
         SaTempUtil.getTempTokenList(event.getPlayer().getUuid()).forEach(
                 SaTempUtil::deleteToken
         );

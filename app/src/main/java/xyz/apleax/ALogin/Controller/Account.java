@@ -3,10 +3,12 @@ package xyz.apleax.ALogin.Controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
-import lombok.AllArgsConstructor;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.Dami;
 import org.noear.solon.annotation.Controller;
+import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Mapping;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.MethodType;
@@ -18,9 +20,12 @@ import xyz.apleax.ALogin.BO.AccountBO;
 import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Enum.AccountType;
-import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.PO.AccountPO;
+import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Service.*;
+import xyz.apleax.ALogin.Service.AccountService;
+import xyz.apleax.ALogin.Util.IpLocationUtil;
+import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.VO.*;
 
 import java.util.Map;
@@ -33,27 +38,33 @@ import java.util.Map;
 @Slf4j
 @Valid
 @Controller
-@AllArgsConstructor
 @Mapping(path = "/api/web/account", produces = "application/json", consumes = "application/json")
 public class Account {
-    private final RegisterService registerService;
-    private final LoginService loginService;
-    private final VerifyCodeService verifyCodeService;
-    private final LogoutService logoutService;
-    private final ResetPasswordService resetPasswordService;
+    private static final String CACHE_REFRESH_ACCOUNT = "81271059";
+
+    private final AccountService accountService;
+    private final LoadingCache<@NotNull String, AccountPO> accountCache;
+    private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
+
+    public Account(AccountService accountService,
+                   @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
+                   @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache) {
+        this.accountService = accountService;
+        this.accountCache = accountCache;
+        this.accountIndexCache = accountIndexCache;
+    }
 
     @SaIgnore
     @Transaction
     @Mapping(path = "/Register", method = MethodType.POST,
             name = "注册", description = "注册接口，用于注册一个账号")
-    public Result<SaTokenInfo> Register(@Validated RegisterVO registerVO, Context context) {
+    public Result<String> Register(@Validated RegisterVO registerVO, Context context) {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
-        return registerService.register(accountBO, verify_code, context.realIp());
+        return accountService.register(accountBO, verify_code, context.realIp());
     }
 
     @SaIgnore
-    @Transaction
     @Mapping(path = "/VerifyCode", method = MethodType.POST,
             name = "验证码", description = "获取一个验证码发送到请求的邮箱")
     public Result<Long> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
@@ -62,7 +73,7 @@ public class Account {
             verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), registerVerifyCodeVO.getType());
         if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO)
             verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), resetPasswordVerifyCodeVO.getType());
-        return verifyCodeService.verifyCode(verifyCodeKey);
+        return accountService.verifyCode(verifyCodeKey);
     }
 
     @SaIgnore
@@ -80,22 +91,13 @@ public class Account {
             loginBO.setAccount_type(AccountType.ACCOUNT);
         }
         if (loginBO != null) loginBO.setReal_ip(Context.current().realIp());
-        return loginService.login(loginBO, token);
+        return accountService.login(loginBO, token);
     }
 
-    @SaIgnore
-    @Transaction
-    @Mapping(path = "/CheckToken", method = MethodType.POST,
-            name = "校验Token", description = "校验Token并获取玩家配置")
-    public GameProfile CheckToken(String token) {
-        return loginService.checkToken(token);
-    }
-
-    @Transaction
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")
-    public Result<SaTokenInfo> Logout(String token) {
-        return logoutService.logout(token);
+    public Result<Void> Logout(String token) {
+        return accountService.logout(token);
     }
 
     @SaIgnore
@@ -103,19 +105,39 @@ public class Account {
     @Mapping(path = "/ResetPassword", method = MethodType.POST,
             name = "重置密码", description = "重置密码接口")
     public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) {
-        return resetPasswordService.resetPassword(resetPasswordVO.getEmail(),
+        return accountService.resetPassword(resetPasswordVO.getEmail(),
                 resetPasswordVO.getVerify_code(),
                 resetPasswordVO.getNew_password());
     }
 
+    @Mapping(path = "/RefreshCache", method = MethodType.POST,
+            name = "刷新缓存", description = "清空账号、账号索引、IP 属地和邮件模板缓存，保留验证码与登录会话")
+    public Result<Boolean> RefreshCache(Context context) {
+        StpUtil.checkLogin();
+        String account = StpUtil.getLoginIdAsString();
+        if (!CACHE_REFRESH_ACCOUNT.equals(account)) {
+            context.status(403);
+            return Result.failure("无权刷新缓存", false);
+        }
+
+        accountCache.invalidateAll();
+        accountIndexCache.invalidateAll();
+        IpLocationUtil.clearCache();
+        MailUtil.clearTemplateCache();
+        log.info("业务缓存刷新成功，account={}", account);
+        return Result.succeed(true);
+    }
+
     @SaIgnore
-    @Transaction
     @Mapping(path = "IsLogin", method = MethodType.ALL,
             name = "是否登录", description = "检查是否登录")
     public Result<Boolean> IsLogin(String token) {
         boolean isLogin = StpUtil.isLogin();
-        if (token != null && isLogin)
-            Dami.bus().send("LoginEvent", Map.of("account", StpUtil.getLoginIdAsString(), "token", token));
+        if (isLogin) {
+            StpUtil.updateLastActiveToNow();
+            if (token != null)
+                Dami.bus().send("LoginEvent", Map.of("account", StpUtil.getLoginIdAsString(), "token", token));
+        }
         return Result.succeed(isLogin);
     }
 }

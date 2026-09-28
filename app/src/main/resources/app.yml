@@ -26,19 +26,21 @@ server:
       mimeTypes: 'text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml'
       coreThreads: 0
       maxThreads: 0
+  request:
+    maxFileSize: 20mb
 
-############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
+############## Sa-Token 配置 (文档: https://sa-token.com/) ##############
 sa-token:
-  # token 名称（同时也是 cookie 名称）
   token-name: AToken
-  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
   token-style: uuid
-  # token 有效期（单位：秒） 默认30天，-1 代表永久有效
-  timeout: 86400
-  # token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
-  active-timeout: -1
-  # 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
+  # Token过期时间
+  timeout: 2592000
+  # Token冻结时间
+  active-timeout: 172800
   is-share: false
+  is-concurrent: false
+  # 自动续签
+  auto-renew: true
   isPrint: false
   isColorLog: true
 
@@ -47,6 +49,8 @@ mybatis:
   DataBase:
     typeAliases: #支持包名 或 类名（大写开头 或 *）//支持 ** 或 * 占位符
       - "xyz.apleax.ALogin.Entity.PO.*"
+    typeHandlers: #支持包名 或 类名（大写开头 或 *）//支持 ** 或 * 占位符
+      - "xyz.apleax.ALogin.TypeHandler.*"
     mappers: #支持包名 或 类名（大写开头 或 *）或 xml（.xml结尾）//支持 ** 或 * 占位符
       - "xyz.apleax.ALogin.SQL.Mapper.*"
     configuration: #扩展配置（要与 MybatisConfiguration 类的属性一一对应）

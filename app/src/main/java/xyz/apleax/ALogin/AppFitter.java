@@ -25,18 +25,18 @@ public class AppFitter implements Filter {
         try {
             chain.doFilter(ctx);
         } catch (NotLoginException e) {
-            ctx.render(Result.failure("Not login"));
+            ctx.render(Result.failure("未登录"));
         } catch (NotPermissionException e) {
-            ctx.render(Result.failure("Not permission"));
+            ctx.render(Result.failure("你没有这个权限"));
         } catch (ValidatorException e) {
             ctx.render(Result.failure(e.getMessage()));
         } catch (ConstructionException |
                  StatusException e) {
             if (e instanceof StatusException) if (!(e.getCause() instanceof InvalidTypeIdException ||
                     e.getCause() instanceof JsonParseException)) return;
-            ctx.render(Result.failure("Invalid parameter"));
+            ctx.render(Result.failure("无效参数"));
         } catch (Exception e) {
-            ctx.render(Result.failure("Server error"));
+            ctx.render(Result.failure("服务器内部错误"));
             log.error(e.getLocalizedMessage(), e);
         }
     }

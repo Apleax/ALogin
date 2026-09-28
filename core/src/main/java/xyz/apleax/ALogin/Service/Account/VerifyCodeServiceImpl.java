@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Account;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
@@ -7,8 +7,6 @@ import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
-import org.noear.solon.data.annotation.Transaction;
-import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.VerifyCodeType;
 import xyz.apleax.ALogin.PO.AccountPO;
@@ -25,7 +23,7 @@ import xyz.apleax.ALogin.Util.VerifyCodeUtil;
  */
 @Slf4j
 @Managed
-@DamiTopic("account.verifycode")
+@DamiTopic("account")
 public class VerifyCodeServiceImpl {
     private final LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
@@ -47,12 +45,9 @@ public class VerifyCodeServiceImpl {
      * @return 验证码发送结果
      * @see VerifyCodeKey
      */
-    @Transaction
     public Result<Long> verifyCode(VerifyCodeKey verifyCodeKey) {
         if (verifyCodeKey.type() == VerifyCodeType.RESET_PASSWORD) {
-            LoginBO loginBO = new LoginBO();
-            loginBO.setEmail(verifyCodeKey.email());
-            String accountId = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, loginBO.getEmail()));
+            String accountId = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, verifyCodeKey.email()));
             AccountPO accountPO = null;
             if (accountId != null) accountPO = accountCache.get(accountId);
             if (accountPO == null) return Result.failure("账号不存在");

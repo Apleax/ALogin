@@ -14,6 +14,9 @@ import org.noear.solon.Solon;
 import org.noear.solon.annotation.*;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -26,11 +29,13 @@ import java.net.InetSocketAddress;
 public class MinestomServerInit {
     @Inject("${minestom.port:25565}")
     private static Integer port;
+    public static Map<UUID, UUID> playerInstanceMap = new ConcurrentHashMap<>(50);
 
     @Init
     public void init() {
         MinecraftServer server = MinecraftServer.init(new Auth.Offline());
         server.start(new InetSocketAddress(port));
+        MinecraftServer.getExceptionManager().setExceptionHandler((throwable) -> log.debug("Exception caught by Minestom: {}", throwable.getMessage()));
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
         Solon.context().wrapAndPut(InstanceManager.class, instanceManager);
         Solon.context().wrapAndPut(InstanceContainer.class, instanceManager.createInstanceContainer(DimensionType.THE_END));
