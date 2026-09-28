@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
@@ -35,7 +34,6 @@ public class GameProfileServiceImpl {
         this.accountIndexCache = accountIndexCache;
     }
 
-    @Transaction
     public GameProfile GameProfile(String token, String uuid) {
         String account;
         AccountPO accountPO;

@@ -15,12 +15,12 @@ import xyz.apleax.ALogin.VO.UserInfoVO;
 public interface UserService {
     Result<UserInfoVO> getUserInfo();
 
-    Result<Boolean> uploadSkin(UploadedFile skin);
+    Result<Boolean> uploadSkin(UploadedFile skin, String variant);
 
     Result<Boolean> changeNickName(String nickname);
 
     /**
-     * 校验Token
+     * 返回玩家档案
      *
      * @param token Token
      * @return GameProfile

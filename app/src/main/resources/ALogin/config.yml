@@ -20,8 +20,14 @@ minestom:
   cookie-key: "alogin"
   # MineSkinApiKey 用于服务器皮肤支持
   mineskin-api-key: ""
+  minimotd:
+    - line1: "<rainbow>[ 不风采的破服 ]  1.21.11~26.2（现已提供基岩版支持）</rainbow>"
+      line2: "<italic><gradient:blue:red>tips: 动物在瞧瞧看着你，你转身时，它会假装没看见</gradient></italic>"
+    - line1: "<blue>[不风采的破服] 版本1.21.11~26.2（现已提供基岩版支持）<bold><red>"
+      line2: "<italic><underlined><gradient:red:yellow>tips: 苦力怕是我们的好朋友，如果你不嫌弃它的“爆炸性欢迎”"
 
-cross.allow-origin: "*"
+# 跨域白名单：凭证模式(withCredentials)下不能用 "*"，必须列出具体源，多个用英文逗号分隔
+cross.allow-origin: "https://www.example.com,https://example.com"
 
 solon.logging:
   appender:
@@ -35,6 +41,10 @@ sa-token:
   is-concurrent: false
   # 是否打印鉴权相关操作日志
   is-log: false
+  # Cookie 作用域设为父域，即允许所有子域名共享Cookie
+  # 为空即不设置Cookie域
+  cookie:
+    domain: "example.com"
 
 # 邮箱配置块
 EmailConfig:
@@ -46,8 +56,6 @@ EmailConfig:
     Email: "example@example.com"
     # 发件人昵称
     Name: "Apleax"
-  # 邮件主题
-  Subject: "A message from Apleax"
   # 邮件服务器登录认证信息
   Authentication:
     UserName: "example@example.com"

@@ -76,4 +76,12 @@ public class AccountPO {
      * 最后登录IP
      */
     private String lastLoginIp;
+    /**
+     * 最后修改昵称时间
+     */
+    private Long lastChangeNickNameTime;
+    /**
+     * 上次使用的昵称
+     */
+    private String previousName;
 }

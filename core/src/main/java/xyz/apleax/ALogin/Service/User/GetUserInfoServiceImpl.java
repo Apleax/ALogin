@@ -8,7 +8,6 @@ import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
-import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
@@ -27,8 +26,7 @@ public class GetUserInfoServiceImpl {
             @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache) {
         this.accountCache = accountCache;
     }
-
-    @Transaction
+    
     public Result<UserInfoVO> getUserInfo() {
         String account = StpUtil.getLoginIdAsString();
         if (account == null) return null;

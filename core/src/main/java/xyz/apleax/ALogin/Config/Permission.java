@@ -1,9 +1,6 @@
 package xyz.apleax.ALogin.Config;
 
-import cn.dev33.satoken.model.wrapperInfo.SaDisableWrapperInfo;
 import cn.dev33.satoken.stp.StpInterface;
-import org.noear.solon.annotation.Condition;
-import org.noear.solon.annotation.Managed;
 import xyz.apleax.ALogin.SQL.Service.Impl.IAccountServiceImpl;
 
 import java.util.List;
@@ -14,9 +11,15 @@ import java.util.List;
  * @author Apleax
  * @see xyz.apleax.ALogin.POJO.PermissionNode PermissionNode
  */
-@Managed
-@Condition(onBean = IAccountServiceImpl.class)
+//@Managed
+//@Condition(onBean = IAccountServiceImpl.class)
 public class Permission implements StpInterface {
+    private final IAccountServiceImpl accountService;
+
+    public Permission(IAccountServiceImpl accountService) {
+        this.accountService = accountService;
+    }
+
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
         return List.of();
@@ -27,8 +30,8 @@ public class Permission implements StpInterface {
         return List.of();
     }
 
-    @Override
-    public SaDisableWrapperInfo isDisabled(Object loginId, String service) {
-        return StpInterface.super.isDisabled(loginId, service);
-    }
+//    @Override
+//    public SaDisableWrapperInfo isDisabled(Object loginId, String service) {
+//        return StpInterface.super.isDisabled(loginId, service);
+//    }
 }

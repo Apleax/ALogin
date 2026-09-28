@@ -28,4 +28,6 @@ public class AccountBO {
     private Long registrationTime;
     private String salt;
     private String lastLoginIp;
+    private Long lastChangeNickNameTime;
+    private String previousName;
 }

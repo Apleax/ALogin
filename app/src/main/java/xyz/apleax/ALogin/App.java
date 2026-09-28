@@ -11,18 +11,16 @@ import org.noear.solon.core.util.JavaUtil;
 import org.noear.solon.core.util.ResourceUtil;
 import org.noear.solon.web.cors.CrossFilter;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.security.Security;
-import java.util.Arrays;
-import java.util.Objects;
 
 @Slf4j
 @SolonMain
 public class App {
+
+    private static final File BASE_DIR = new File(".");
+
     static void main(String[] args) {
         Solon.start(App.class, args, app -> {
             if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
@@ -32,133 +30,128 @@ public class App {
                     log.warn("Failed to initialize AnsiConsole");
                 }
             Security.addProvider(new BouncyCastleProvider());
+
             String appName = Solon.cfg().appName();
-            URL configPath = ResourceUtil.getResourceByFile("./" + appName + "/config.yml");
-            if (Solon.cfg().env() != null &&
-                    !Solon.cfg().env().isEmpty()) configPath = ResourceUtil.getResource(appName + "/config-dev.yml");
-            if (configPath != null) Solon.cfg().loadAdd(configPath);
-            else {
-                String[] requiredResources = ResourceUtil.scanResources("classpath:" + appName + "/*").toArray(new String[0]);
-                // 资源文件初始化
-                handleFileInitialization(appName, requiredResources);
-                Solon.cfg().loadAdd(configPath);
+            String env = Solon.cfg().env();
+            boolean isDev = env != null && !env.isEmpty();
+
+            String[] requiredResources = ResourceUtil
+                    .scanResources("classpath:" + appName + "/**/*")
+                    .toArray(new String[0]);
+            log.debug("Scanned {} classpath resources under {}/: {}", requiredResources.length, appName, requiredResources);
+
+            if (!handleFileInitialization(appName, requiredResources, isDev)) return;
+
+            String configFileName = isDev ? "config-dev.yml" : "config.yml";
+            URL configPath = ResourceUtil.getResourceByFile("./" + appName + "/" + configFileName);
+            if (configPath == null && isDev) configPath = ResourceUtil.getResource(appName + "/" + configFileName);
+            if (configPath == null) {
+                log.error("Config file not found after initialization: ./{}/{}", appName, configFileName);
+                Solon.stop();
+                return;
             }
+            Solon.cfg().loadAdd(configPath);
+
             String cross = Solon.cfg().get("cross.allow-origin", "*");
-            app.router().filter(-1, new CrossFilter().allowedOrigins(cross.isEmpty() ? "*" : cross));
+            app.router().filter(-1, new CrossFilter()
+                    .allowedOrigins(cross.isEmpty() ? "*" : cross)
+                    .allowCredentials(true));
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }
 
     /**
-     * 处理文件初始化/恢复
+     * 首次运行 / 缺失文件时的资源初始化流程。
+     * <p>
+     * 非 dev 环境下首次初始化完成后会 {@link Solon#stop()} 退出，等待用户编辑配置后手动重启；
+     * dev 环境直接返回继续启动，便于 IDE 调试。
+     * <p>
+     * 补齐缺失文件不会停止应用（模板类文件无需用户编辑）。
      *
-     * @param appName           应用名称
-     * @param requiredResources 必需的资源文件类路径列表
+     * @param appName           应用名（同时是外部资源根目录名）
+     * @param requiredResources 需要初始化的 classpath 资源路径列表
+     * @param isDev             是否 dev 环境
+     * @return {@code true} 表示可继续启动；{@code false} 表示已请求停止
      */
-    private static void handleFileInitialization(String appName, String[] requiredResources) {
+    private static boolean handleFileInitialization(String appName, String[] requiredResources, boolean isDev) {
         if (requiredResources.length == 0) {
             log.warn("No resource files found for initialization");
-            return;
+            return true;
         }
-        boolean needsInitialization = ResourceUtil.findResource("file:" + appName) == null;
-        if (needsInitialization) {
+        File appDir = new File(BASE_DIR, appName);
+        if (!appDir.exists()) {
             log.info("ConfigFile Initialization...");
-            if (!createDirectories(requiredResources) || !copyAllConfigFiles(requiredResources)) {
+            if (!copyAllResources(requiredResources)) {
                 log.error("Initialization failed");
-                Solon.stopBlock();
+                Solon.stop();
+                return false;
             }
-            if (!Objects.equals(Solon.cfg().env(), "dev")) {
+            if (!isDev) {
                 log.info("ConfigFile Initialization completed, Please restart after configuration");
                 Solon.stop();
+                return false;
             }
-        } else checkAndRecoverMissingFiles(requiredResources);
-    }
-
-    /**
-     * 复制所有配置文件
-     *
-     * @param resourcePaths 必需的资源文件类路径列表
-     * @return 是否初始化成功
-     */
-    private static boolean copyAllConfigFiles(String[] resourcePaths) {
-        if (resourcePaths.length == 0) return false;
-        for (String resourcePath : resourcePaths) if (recoverSingleFile(resourcePath)) return false;
+        } else recoverMissingFiles(requiredResources);
         return true;
     }
 
     /**
-     * 检查并恢复缺失的文件
+     * 复制所有 classpath 资源到外部运行目录（首次初始化）。
      *
-     * @param resourcePaths 必需的资源文件类路径列表
+     * @return 全部成功返回 {@code true}；任何一个失败立即返回 {@code false}
      */
-    private static void checkAndRecoverMissingFiles(String[] resourcePaths) {
-        boolean hasMissingFiles = false;
+    private static boolean copyAllResources(String[] resourcePaths) {
+        for (String resourcePath : resourcePaths) if (!copySingleResource(resourcePath)) return false;
+        return true;
+    }
+
+    /**
+     * 检查外部目录，补齐缺失的资源文件。
+     */
+    private static void recoverMissingFiles(String[] resourcePaths) {
         for (String resourcePath : resourcePaths) {
-            File file = new File(ResourceUtil.findResource("file:").getPath().substring(1) + resourcePath);
-            if (!file.exists()) {
-                log.debug("Found missing file: {}", resourcePath);
-                hasMissingFiles = true;
-                if (recoverSingleFile(resourcePath)) log.error("Failed to recover file: {}", resourcePath);
-            }
-        }
-        if (hasMissingFiles) if (!Objects.equals(Solon.cfg().env(), "dev")) {
-            log.debug("Recovered all missing configuration files, Please reconfigure it before starting");
-            Solon.stop();
+            File target = new File(BASE_DIR, normalize(resourcePath));
+            if (target.exists()) continue;
+            log.info("Found missing file: {}", resourcePath);
+            if (copySingleResource(resourcePath)) log.debug("Recovered file: {}", resourcePath);
+            else log.error("Failed to recover file: {}", resourcePath);
         }
     }
 
     /**
-     * 恢复单个文件
+     * 从 classpath 复制单个资源到外部运行目录：自动创建父目录，覆盖已存在文件。
      *
-     * @param resourcePath 必需的资源文件类路径
-     * @return 是否恢复成功
+     * @return 成功返回 {@code true}；失败返回 {@code false}
      */
-    private static boolean recoverSingleFile(String resourcePath) {
-        File targetFile = new File(ResourceUtil.findResource("file:").getPath().substring(1) + resourcePath);
-        File parentDir = targetFile.getParentFile();
-        if (createDirectoryIfNotExists(parentDir)) return true;
-        try (InputStream inputStream = ResourceUtil.getResourceAsStream(resourcePath);
-             FileOutputStream outputStream = new FileOutputStream(targetFile)) {
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) outputStream.write(buffer, 0, bytesRead);
+    private static boolean copySingleResource(String resourcePath) {
+        String normalized = normalize(resourcePath);
+        File target = new File(BASE_DIR, normalized);
+        File parent = target.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            log.error("Failed to create directory: {}", parent.getAbsolutePath());
             return false;
+        }
+        try {
+            InputStream in = ResourceUtil.getResourceAsStream(normalized);
+            if (in == null) {
+                // classpath 中不存在此资源（可能是 scanResources 返回了目录项，或 jar 内资源缺失）
+                log.error("Resource not found in classpath: {}", normalized);
+                return false;
+            }
+            try (in; OutputStream out = new FileOutputStream(target)) {
+                in.transferTo(out);
+                return true;
+            }
         } catch (IOException e) {
-            log.error("Failed to recover file: {}", resourcePath, e);
-            return true;
+            log.error("Failed to copy resource: {}", normalized, e);
+            return false;
         }
     }
 
     /**
-     * 创建目录（如果不存在）
-     *
-     * @param directory 目录
-     * @return 是否创建成功<br><code>true</code>为失败，<code>false</code>为成功
+     * 去掉资源路径可能的前导斜杠，避免 {@link File#File(File, String)} 把 child 当绝对路径处理。
      */
-    private static boolean createDirectoryIfNotExists(File directory) {
-        if (directory != null && !directory.exists()) if (!directory.mkdirs()) {
-            log.error("Failed to create directory: {}", directory.getAbsolutePath());
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 创建所有必需的目录
-     *
-     * @param resourcePaths 必需的资源文件类路径列表
-     * @return 是否创建成功
-     */
-    private static boolean createDirectories(String[] resourcePaths) {
-        String[] dirPaths = Arrays.stream(resourcePaths)
-                .map(s -> s.substring(0, s.lastIndexOf("/")))
-                .distinct()
-                .toArray(String[]::new);
-        for (String dirPath : dirPaths) {
-            File dir = new File(ResourceUtil.findResource("file:").getPath().substring(1) + dirPath);
-            if (dir.exists()) continue;
-            if (createDirectoryIfNotExists(dir)) return false;
-        }
-        return true;
+    private static String normalize(String resourcePath) {
+        return resourcePath.startsWith("/") ? resourcePath.substring(1) : resourcePath;
     }
 }

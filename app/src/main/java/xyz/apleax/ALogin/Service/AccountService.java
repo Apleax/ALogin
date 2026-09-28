@@ -15,14 +15,14 @@ import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 @DamiTopic("account")
 public interface AccountService {
     /**
-     * 注册
+     * 注册（注册后不自动登录，返回新账号 ID）
      *
      * @param accountBO   注册信息
      * @param verify_code 验证码
      * @param real_ip     真实ip
      * @author Apleax
      */
-    Result<SaTokenInfo> register(AccountBO accountBO, String verify_code, String real_ip);
+    Result<String> register(AccountBO accountBO, String verify_code, String real_ip);
 
     /**
      * 登录
@@ -37,7 +37,7 @@ public interface AccountService {
      *
      * @author Apleax
      */
-    Result<SaTokenInfo> logout(String token);
+    Result<Void> logout(String token);
 
     /**
      * 重置密码

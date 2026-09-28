@@ -14,19 +14,35 @@ import xyz.apleax.ALogin.Util.RandomStringUtils;
 import xyz.apleax.ALogin.Util.VaultCoderImpl;
 
 import javax.sql.DataSource;
+import java.io.File;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.Statement;
 
 /**
+ * 数据库启动配置：构建 {@link DataSource}、初始化数据表、引导 Vault 加密。
+ *
  * @author Apleax
  */
 @Slf4j
 @Configuration
-public record DataBaseConfig() implements LifecycleBean {
-    private static HikariDataSource preheatedDataSource;
-    private static String vaultPassword = Solon.cfg().get("DataBase.vault.password");
-    private static final boolean vaultEnabled =
-            Solon.cfg().getBool("DataBase.vault.enabled", false) &&
-                    vaultPassword.isBlank();
+public class DataBaseConfig implements LifecycleBean {
+    /**
+     * Vault 密码：来自配置，或首次启用时自动生成。实例字段，依赖 @Configuration 单例语义
+     */
+    private String vaultPassword;
+    /**
+     * 是否需要自动生成 Vault（配置启用 Vault 但配置中Vault为空时为 true）
+     */
+    private final boolean needGenerateVaultPassword;
+
+    private HikariDataSource preheatedDataSource;
+
+    public DataBaseConfig() {
+        this.vaultPassword = Solon.cfg().get("DataBase.vault.password", "");
+        this.needGenerateVaultPassword = Solon.cfg().getBool("DataBase.vault.enabled", false)
+                && this.vaultPassword.isBlank();
+    }
 
     @Override
     public void start() {
@@ -39,19 +55,16 @@ public record DataBaseConfig() implements LifecycleBean {
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
         log.info("DataBaseConfig Loading...");
         HikariDataSource ds = new HikariDataSource();
-        String choose;
-        if (dbProps.jdbc() != null && !dbProps.jdbc().isEmpty())
-            choose = dbProps.jdbc().substring(5).split(":", 2)[0].toLowerCase();
-        else choose = dbProps.choose().toLowerCase();
+        String choose = resolveDbType(dbProps);
         switch (choose) {
             case "mysql" -> ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
             case "sqlserver" -> ds.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             case "sqlite" -> ds.setDriverClassName("org.sqlite.JDBC");
-            default -> throw new IllegalArgumentException("The database type is wrong: " + dbProps.choose());
+            default -> throw new IllegalArgumentException("The database type is wrong: " + choose);
         }
-        String jdbcUrl = buildJdbcUrl(dbProps);
+        String jdbcUrl = buildJdbcUrl(dbProps, choose);
         ds.setJdbcUrl(jdbcUrl);
-        if (vaultEnabled) {
+        if (needGenerateVaultPassword) {
             log.info("""
                             Vault password: {}
                             Encrypt database name: {}
@@ -85,52 +98,75 @@ public record DataBaseConfig() implements LifecycleBean {
 
     @Managed(typed = true, index = -100)
     public VaultCoderImpl vaultCoderInit() {
-        if (vaultEnabled) vaultPassword = RandomStringUtils.generateLowerUpper(16);
+        if (needGenerateVaultPassword) vaultPassword = RandomStringUtils.generateLowerUpper(16);
         return new VaultCoderImpl(vaultPassword);
     }
 
-    private String buildJdbcUrl(DatabaseProperties dbProps) {
-        if (dbProps.jdbc() != null && !dbProps.jdbc().isEmpty()) return dbProps.jdbc();
-        String jdbcUrl = "jdbc:" + dbProps.choose().toLowerCase() + "://";
-        switch (dbProps.choose().toLowerCase()) {
-            case "mysql" -> {
-                return jdbcUrl +
-                        dbProps.host() +
-                        ":" +
-                        dbProps.port() +
-                        "/" +
-                        dbProps.database() +
-                        "?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true";
-            }
-            case "sqlserver" -> {
-                return jdbcUrl +
-                        dbProps.host() +
-                        ":" +
-                        dbProps.port() +
-                        ";databaseName=" +
-                        dbProps.database() +
-                        ";encrypt=false;trustServerCertificate=true";
-            }
-            case "sqlite" -> {
-                String path = dbProps.path();
-                if (path == null || path.isEmpty())
-                    path = ResourceUtil.findResource("file:" + Solon.cfg().appName()).getPath().substring(1) + "DataBase/ALogin.db";
-                return jdbcUrl + path;
-            }
-            default -> throw new IllegalArgumentException("Unsupported database type: " + dbProps.choose());
+    /**
+     * 解析数据库类型：优先从 jdbc URL 提取，否则用 choose 字段
+     */
+    private String resolveDbType(DatabaseProperties dbProps) {
+        String jdbc = dbProps.jdbc();
+        if (jdbc != null && !jdbc.isEmpty()) {
+            if (!jdbc.startsWith("jdbc:"))
+                throw new IllegalArgumentException("非法 JDBC URL（必须以 jdbc: 开头）: " + jdbc);
+            return jdbc.substring(5).split(":", 2)[0].toLowerCase();
         }
+        String choose = dbProps.choose();
+        if (choose == null || choose.isBlank())
+            throw new IllegalArgumentException("必须配置 DataBase.choose 或 DataBase.jdbc");
+        return choose.toLowerCase();
+    }
+
+    private String buildJdbcUrl(DatabaseProperties dbProps, String choose) {
+        String jdbc = dbProps.jdbc();
+        if (jdbc != null && !jdbc.isEmpty()) return jdbc;
+        String prefix = "jdbc:" + choose + "://";
+        return switch (choose) {
+            case "mysql" -> prefix + dbProps.host() + ":" + portOrDefault(dbProps.port(), 3306)
+                    + "/" + dbProps.database()
+                    + "?useUnicode=true&characterEncoding=utf8&autoReconnect=true"
+                    // allowMultiQueries 支持 initializeTable 执行含多条语句的 .sql 脚本
+                    + "&rewriteBatchedStatements=true&allowMultiQueries=true";
+            case "sqlserver" -> prefix + dbProps.host() + ":" + portOrDefault(dbProps.port(), 1433)
+                    + ";databaseName=" + dbProps.database()
+                    + ";encrypt=false;trustServerCertificate=true";
+            case "sqlite" -> prefix + resolveSqlitePath(dbProps);
+            default -> throw new IllegalArgumentException("Unsupported database type: " + choose);
+        };
+    }
+
+    /**
+     * port 未配置（record int 缺省为 0）时回退到数据库默认端口。
+     */
+    private static int portOrDefault(int port, int defaultPort) {
+        return port > 0 ? port : defaultPort;
+    }
+
+    /**
+     * SQLite 库文件路径：未显式配置 path 时，生成至工作目录下的 DataBase/ALogin.db。
+     */
+    private String resolveSqlitePath(DatabaseProperties dbProps) {
+        String path = dbProps.path();
+        if (path != null && !path.isBlank()) return path;
+        return System.getProperty("user.dir") + File.separator + "DataBase" + File.separator + "ALogin.db";
     }
 
     private void preheatDataSource(HikariDataSource dataSource) {
-        int preheatCount = Math.min(dataSource.getMinimumIdle(), 20);
-        java.sql.Connection[] connections = new java.sql.Connection[preheatCount];
+        int minIdle = dataSource.getMinimumIdle();
+        if (minIdle <= 0) {
+            log.debug("跳过连接预热：minimumIdle={}", minIdle);
+            return;
+        }
+        int preheatCount = Math.min(minIdle, 20);
+        Connection[] connections = new Connection[preheatCount];
         try {
             for (int i = 0; i < preheatCount; i++) connections[i] = dataSource.getConnection();
             for (int i = 0; i < preheatCount; i++) if (connections[i] != null) connections[i].close();
             log.info("Preheated {} database connections", preheatCount);
         } catch (Exception e) {
             log.warn("Failed to preheat database connections: {}", e.getMessage());
-            for (java.sql.Connection conn : connections)
+            for (Connection conn : connections)
                 if (conn != null) try {
                     conn.close();
                 } catch (Exception ignored) {
@@ -139,26 +175,29 @@ public record DataBaseConfig() implements LifecycleBean {
     }
 
     private void initializeTable(HikariDataSource dataSource, String choose) {
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             for (String resource : ResourceUtil.scanResources("classpath:SQL/" + choose + "/*")) {
                 String name = resource.substring(resource.lastIndexOf("/") + 1, resource.lastIndexOf("."));
                 boolean tableExists;
-                ResultSet rs = connection.getMetaData().getTables(null, null, name, new String[]{"TABLE"});
-                tableExists = rs.next();
+                // try-with-resources 确保 ResultSet/Statement 关闭，避免元数据查询泄漏游标
+                try (ResultSet rs = connection.getMetaData().getTables(null, null, name, new String[]{"TABLE"})) {
+                    tableExists = rs.next();
+                }
                 if (tableExists) continue;
                 String sql = ResourceUtil.getResourceAsString(resource);
-                java.sql.Statement statement = connection.createStatement();
-                statement.execute(sql);
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute(sql);
+                }
                 log.info("Initialize {} table of {}", name, choose);
             }
         } catch (Exception e) {
-            log.warn("Failed to initialize table: {}", e.getMessage(), e);
-            Solon.stop();
+            log.error("Failed to initialize table, abort startup", e);
+            throw new IllegalStateException("数据库表初始化失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 数据库配置属性类
+     * 数据库配置属性类。
      */
     public record DatabaseProperties(
             VaultProperties vault,
@@ -171,19 +210,10 @@ public record DataBaseConfig() implements LifecycleBean {
             String jdbc,
             String path
     ) {
-        @Override
-        public String database() {
-            return VaultUtils.guard(database);
-        }
-
-        @Override
-        public String username() {
-            return VaultUtils.guard(username);
-        }
-
-        @Override
-        public String password() {
-            return VaultUtils.guard(password);
+        public DatabaseProperties {
+            database = VaultUtils.guard(database);
+            username = VaultUtils.guard(username);
+            password = VaultUtils.guard(password);
         }
     }
 

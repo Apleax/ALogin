@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 @Managed
 @Condition(onClass = MinecraftServer.class)
 public class LoginCommand extends Command {
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9\\u4e00-\\u9fa5]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9_-]+@[A-Za-z0-9]+(\\.[A-Za-z0-9-]+)+$");
     private static final String transfer = Solon.cfg().get("minestom.transfer");
     private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
 
