@@ -54,14 +54,14 @@ public class User {
     @SaIgnore
     @Mapping(path = "/GameProfile", method = MethodType.POST,
             name = "校验Token", description = "校验Token并获取玩家配置")
-    public GameProfile GameProfile(String token, String uuid, Context ctx) {
+    public GameProfile GameProfile(String token, String uuid, String playerIp, Context ctx) {
         if (token != null && uuid != null) {
             ctx.status(400);
             return null;
         }
         GameProfile profile = null;
-        if (token != null && !token.isBlank()) profile = userService.GameProfile(token, "");
-        if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid);
+        if (token != null && !token.isBlank()) profile = userService.GameProfile(token, "", playerIp);
+        if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid, playerIp);
         if (profile == null) ctx.status(400);
         else ctx.status(200);
         return profile;

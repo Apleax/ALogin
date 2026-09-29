@@ -1,0 +1,5 @@
+name: ALoginPremium
+author: Apleax
+version: 0.1.0
+main: xyz.apleax.alogin.viaproxy.ALoginPremiumPlugin
+min-version: 3.4.0

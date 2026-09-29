@@ -5,12 +5,15 @@ import cn.dev33.satoken.temp.SaTempUtil;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.packet.server.common.TransferPacket;
+import org.noear.dami2.Dami;
 import org.noear.dami2.bus.Event;
 import org.noear.dami2.bus.EventListener;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.POJO.PremiumAssertion;
+import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -28,6 +31,12 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
     private static final String transfer = Solon.cfg().get("minestom.transfer");
     private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
 
+    private final PremiumAssertionService assertionService;
+
+    public LoginEventListener(PremiumAssertionService assertionService) {
+        this.assertionService = assertionService;
+    }
+
     @Override
     public void onEvent(Event<Map<String, String>> event) {
         Map<String, String> map = event.getPayload();
@@ -44,6 +53,12 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
             address = transfer;
             port = 25565;
         }
+        // 首次绑定：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）
+        PremiumAssertion assertion = assertionService.get(player.getUuid());
+        if (assertion != null)
+            Dami.bus().send("PremiumBind", Map.of("account", map.get("account"),
+                    "premiumUuid", assertion.uuid().toString(),
+                    "premiumName", assertion.name() == null ? "" : assertion.name()));
         player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(map.get("account")).getBytes(StandardCharsets.UTF_8));
         player.sendPacket(new TransferPacket(address, port));
         SaTempUtil.deleteToken(map.get("token"));

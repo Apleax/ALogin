@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      ALogin 正版免密断言的 ViaProxy 插件（独立工程，不参与 ALogin 主构建）。
+
+      依赖的 ViaProxy 为 provided（仅编译期使用，运行期由 ViaProxy 自带）：
+        mvn install:install-file -Dfile=ViaProxy-<版本>.jar -DgroupId=net.raphimc -DartifactId=viaproxy \
+            -Dversion=<版本> -Dpackaging=jar
+      产物：target/ALogin-viaproxy-plugin-<版本>.jar，丢进 ViaProxy 的 plugins/ 目录即可。
+    -->
+    <groupId>xyz.apleax</groupId>
+    <artifactId>ALogin-viaproxy-plugin</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <viaproxy.version>3.4.14</viaproxy.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.raphimc</groupId>
+            <artifactId>viaproxy</artifactId>
+            <version>${viaproxy.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>ALogin-viaproxy-plugin-${project.version}</finalName>
+    </build>
+</project>

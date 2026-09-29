@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 
 import java.util.List;
 import java.util.UUID;
@@ -84,4 +85,21 @@ public class AccountPO {
      * 上次使用的昵称
      */
     private String previousName;
+    /**
+     * 正版 UUID（微软档案 UUID）
+     */
+    @TableField(typeHandler = UuidTypeHandler.class)
+    private UUID premiumUuid;
+    /**
+     * 绑定时正版档案名称（仅用于展示）
+     */
+    private String premiumName;
+    /**
+     * 基岩版 XUID（Xbox 账号唯一 ID）
+     */
+    private String bedrockXuid;
+    /**
+     * 基岩版游戏名（仅用于展示）
+     */
+    private String bedrockName;
 }

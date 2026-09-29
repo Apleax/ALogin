@@ -12,6 +12,7 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.packet.server.common.TransferPacket;
 import org.jetbrains.annotations.NotNull;
+import org.noear.dami2.Dami;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Inject;
@@ -20,10 +21,14 @@ import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.POJO.PremiumAssertion;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -39,11 +44,15 @@ public class LoginCommand extends Command {
     private static final String transfer = Solon.cfg().get("minestom.transfer");
     private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
 
+    private final PremiumAssertionService assertionService;
+
     public LoginCommand(@Ds("DataBase") IAccountService accountService,
                         @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
                         @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
-                        @Inject("Algorithm") PasswordEncryptor encryptor) {
+                        @Inject("Algorithm") PasswordEncryptor encryptor,
+                        PremiumAssertionService assertionService) {
         super("login", "l");
+        this.assertionService = assertionService;
 
         setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
 
@@ -81,8 +90,11 @@ public class LoginCommand extends Command {
             }
             SaTokenContextMockUtil.setMockContext();
             StpUtil.login(accountPO.getAccount(), AccountType.EMAIL.getKey());
+            // 只取纯 IP, InetSocketAddress#toString 会带 "/" 和端口
+            String realIp = ((InetSocketAddress) player.getPlayerConnection().getRemoteAddress())
+                    .getHostString();
             boolean updated = accountService.update((new LambdaUpdateWrapper<AccountPO>()
-                    .set(AccountPO::getLastLoginIp, player.getPlayerConnection().getRemoteAddress().toString())
+                    .set(AccountPO::getLastLoginIp, realIp)
                     .eq(AccountPO::getAccount, accountPO.getAccount())));
             if (updated) accountCache.put(accountPO.getAccount(), accountPO);
             else log.warn("Failed to update last login time for account: {}", accountPO.getAccount());
@@ -95,6 +107,12 @@ public class LoginCommand extends Command {
                 address = transfer;
                 port = 25565;
             }
+            // 首次绑定：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）
+            PremiumAssertion assertion = assertionService.get(player.getUuid());
+            if (assertion != null)
+                Dami.bus().send("PremiumBind", Map.of("account", account,
+                        "premiumUuid", assertion.uuid().toString(),
+                        "premiumName", assertion.name() == null ? "" : assertion.name()));
             player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(account).getBytes(StandardCharsets.UTF_8));
             player.sendPacket(new TransferPacket(address, port));
         }, email, password);

@@ -28,3 +28,15 @@ nbdist/
 ### Mac files ###
 *.DS_Store
 /app/src/main/resources/ALogin/config-dev.yml
+
+### 运行期产物（jar 同目录生成，含真实配置/日志/数据库） ###
+/ALogin/
+/logs/
+/DataBase/
+dependency-reduced-pom.xml
+hs_err_pid*.log
+replay_pid*.log
+*.class
+
+### AI 本地笔记目录（不入库） ###
+/docs/

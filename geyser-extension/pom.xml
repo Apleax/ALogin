@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>xyz.apleax</groupId>
+        <artifactId>ALogin</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>ALogin-geyser-extension</artifactId>
+
+    <properties>
+        <!-- 扩展由 Geyser 所在 JVM 加载, 编译到 Java 21 以匹配其运行环境 -->
+        <java.version>21</java.version>
+        <geyser.api.version>2.11.3-SNAPSHOT</geyser.api.version>
+        <geyser.event.version>1.1-SNAPSHOT</geyser.event.version>
+    </properties>
+
+    <dependencies>
+        <!-- Geyser 运行时自带, 不随扩展打包 -->
+        <dependency>
+            <groupId>org.geysermc.geyser</groupId>
+            <artifactId>api</artifactId>
+            <version>${geyser.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Geyser api 未将事件库作为传递依赖发布, 需要显式声明 -->
+        <dependency>
+            <groupId>org.geysermc.event</groupId>
+            <artifactId>events</artifactId>
+            <version>${geyser.event.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Geyser 独立端已捆绑 Gson, 用于表单登录的请求与响应解析 -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.2</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>opencollab</id>
+            <url>https://repo.opencollab.dev/main/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <build>
+        <finalName>${project.artifactId}-${project.parent.version}</finalName>
+    </build>
+</project>

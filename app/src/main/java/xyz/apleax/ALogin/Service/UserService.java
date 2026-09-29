@@ -22,8 +22,10 @@ public interface UserService {
     /**
      * 返回玩家档案
      *
-     * @param token Token
+     * @param token    Token
+     * @param uuid     UUID
+     * @param playerIp 代理上报的真实客户端 IP（可空，仅 token 分支生效）
      * @return GameProfile
      */
-    GameProfile GameProfile(String token, String uuid);
+    GameProfile GameProfile(String token, String uuid, String playerIp);
 }

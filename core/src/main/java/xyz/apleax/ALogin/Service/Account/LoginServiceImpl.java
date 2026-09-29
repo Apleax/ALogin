@@ -155,7 +155,7 @@ public class LoginServiceImpl {
             case EMAIL -> loginBO.getEmail();
             case ACCOUNT -> loginBO.getAccount();
             case QQ_ACCOUNT -> loginBO.getQq_account();
-            case UUID -> null;
+            case UUID, PREMIUM_UUID, BEDROCK_XUID -> null;
         };
         if (identifier == null || identifier.isBlank()) return null;
         return accountIndexCache.get(new AccountIndexCache(accountType, identifier));

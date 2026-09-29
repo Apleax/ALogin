@@ -84,3 +84,19 @@ Security:
   encryption:
     # 加密算法: SHA256, SHA512, Argon2
     algorithm: SHA512
+
+# 正版（微软设备码授权 + 免密断言）配置块
+# 设备码授权借用 Minecraft 启动器官方凭据，无需 Azure 应用注册，因此没有 oauth 配置项
+Premium:
+  # 正版免密断言（B 路线）：由 ViaProxy 插件回传的 HMAC 签名断言
+  assertion:
+    # 总开关；关闭或未配置 secret 时完全不发挑战，行为与现状一致
+    enabled: true
+    # 与 ViaProxy 插件共享的密钥（openssl rand -hex 32 生成；值当口令保密）
+    secret: ""
+    # 与插件约定的登录插件消息通道
+    channel: "alogin:premium"
+    # 等待插件应答的超时毫秒数，必须小于 5000（否则 Minestom 会因超时踢人）
+    timeout-ms: 3500
+    # 断言时间戳允许的时钟偏移（秒）
+    clock-skew-seconds: 120

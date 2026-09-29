@@ -25,6 +25,7 @@
         <module>server</module>
         <module>entity</module>
         <module>geyser-extension</module>
+        <module>viaproxy-plugin</module>
     </modules>
 
     <!-- 依赖版本 -->

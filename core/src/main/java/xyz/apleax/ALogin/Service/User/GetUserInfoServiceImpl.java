@@ -32,6 +32,8 @@ public class GetUserInfoServiceImpl {
         if (account == null) return null;
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return null;
-        return Result.succeed(new UserInfoVO(accountPO.getAccount(), accountPO.getNickName(), accountPO.getAvatar()));
+        return Result.succeed(new UserInfoVO(accountPO.getAccount(), accountPO.getNickName(), accountPO.getAvatar(),
+                accountPO.getPremiumUuid() == null ? null : accountPO.getPremiumUuid().toString(),
+                accountPO.getPremiumName()));
     }
 }

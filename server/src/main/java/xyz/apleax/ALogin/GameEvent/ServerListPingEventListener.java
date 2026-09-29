@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -33,9 +34,8 @@ import java.util.List;
 public class ServerListPingEventListener implements EventListener<@NotNull ServerListPingEvent> {
 
     private static final String appName = Solon.cfg().appName();
-    private static final URL iconFile = ResourceUtil.findResource("file:" + appName + "/icon.png");
     private static final List<MiniMotd> minimotd = loadMiniMotd();
-    private static final byte[] favicon = loadFavicon();
+    private static final List<byte[]> favicons = loadFavicons();
     private final MiniMessage mm = MiniMessage.miniMessage();
 
     @Override
@@ -48,7 +48,7 @@ public class ServerListPingEventListener implements EventListener<@NotNull Serve
         if (event.getConnection() == null) return Result.INVALID;
         if (event.getPingType().equals(ServerListPingType.MODERN_FULL_RGB)) event.setStatus(Status.builder()
                 .description(currentMotd())
-                .favicon(favicon)
+                .favicon(currentFavicon())
                 .playerInfo(Status.PlayerInfo.onlineCount())
                 .versionInfo(new Status.VersionInfo("1.21.11-26.2", event.getConnection().getProtocolVersion()))
                 .build());
@@ -56,26 +56,41 @@ public class ServerListPingEventListener implements EventListener<@NotNull Serve
     }
 
     /**
-     * 类加载时读取一次服务器图标,缺失时返回 null 并提示
+     * 读取全部图标,
+     *
+     * @return 图标字节数组列表,未找到时返回空列表
+     */
+    private static List<byte[]> loadFavicons() {
+        Collection<String> iconPaths = ResourceUtil.scanResources("file:" + appName + "/icons/*.png");
+        boolean fromClasspath = iconPaths.isEmpty();
+        if (fromClasspath) iconPaths = ResourceUtil.scanResources("classpath:" + appName + "/icons/*.png");
+        if (iconPaths.isEmpty()) {
+            log.warn("No icons found, place *.png files in {}/icons/ (64x64 png)", appName);
+            return List.of();
+        }
+
+        List<byte[]> icons = new ArrayList<>(iconPaths.size());
+        for (String iconPath : iconPaths) {
+            URL iconUrl = ResourceUtil.findResource((fromClasspath ? "classpath:" : "file:") + iconPath);
+            if (iconUrl == null) continue;
+            try (InputStream in = iconUrl.openStream()) {
+                icons.add(in.readAllBytes());
+            } catch (IOException e) {
+                log.warn("Failed to load icon {}: {}", iconPath, e.getMessage());
+            }
+        }
+        log.info("Loaded {} server icons from {}:{}/icons", icons.size(), fromClasspath ? "classpath" : "file", appName);
+        return icons;
+    }
+
+    /**
+     * 获取当前展示的服务器图标,多张图标随机使用
      *
      * @return 图标字节数组,未找到时返回 null
      */
-    private static byte[] loadFavicon() {
-        if (!ResourceUtil.hasResource("file:" + appName + "/icon.png")) {
-            log.warn("icon.png not found, place it in resources/{}/icon.png (64x64 png)", appName);
-            try (InputStream in = ResourceUtil.findResource("classpath:" + appName + "/icon.png").openStream()) {
-                return in.readAllBytes();
-            } catch (IOException e) {
-                log.warn("Failed to load icon.png: {}", e.getMessage());
-                return null;
-            }
-        }
-        try (InputStream in = iconFile.openStream()) {
-            return in.readAllBytes();
-        } catch (IOException e) {
-            log.warn("Failed to load icon.png: {}", e.getMessage());
-            return null;
-        }
+    private byte[] currentFavicon() {
+        if (favicons.isEmpty()) return null;
+        return favicons.get((int) (Math.random() * favicons.size()));
     }
 
     /**
