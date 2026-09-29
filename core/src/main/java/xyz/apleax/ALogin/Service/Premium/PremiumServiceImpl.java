@@ -23,7 +23,6 @@ import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
 import xyz.apleax.ALogin.POJO.PremiumFlowStatus;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
-import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import java.time.Duration;
@@ -284,7 +283,6 @@ public class PremiumServiceImpl {
         if (!Objects.equals(profile.name(), accountPO.getPremiumName())
                 && updatePremiumName(account, profile.name()))
             log.info("正版名称变更已同步，account={}, premiumName={}", account, profile.name());
-        String oldIp = accountPO.getLastLoginIp();
         if (realIp != null && !realIp.isBlank()) {
             boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
                     .set(AccountPO::getLastLoginIp, realIp)
@@ -296,8 +294,6 @@ public class PremiumServiceImpl {
             accountCache.invalidate(account);
         }
         StpUtil.login(account, AccountType.PREMIUM_UUID.getKey());
-        if (realIp != null && !realIp.isBlank() && oldIp != null && !oldIp.equals(realIp))
-            MailUtil.sendIpChangeAlertAsync(accountPO.getEmail(), account, oldIp, realIp);
         Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
         log.info("正版登录成功，account={}, premiumUuid={}, name={}", account, profile.uuid(), profile.name());
         return Result.succeed(profile);

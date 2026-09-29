@@ -20,7 +20,6 @@ import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Util.Encrypt.EncryptorSelector;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
-import xyz.apleax.ALogin.Util.MailUtil;
 
 import java.util.Map;
 
@@ -79,7 +78,6 @@ public class LoginServiceImpl {
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return Result.failure(accountType.getValue() + "或密码错误");
 
-        boolean alertAlreadySent = false;
         if (StpUtil.isLogin()) {
             String storedIp = accountPO.getLastLoginIp();
             if (storedIp != null && storedIp.equals(realIp)) {
@@ -92,10 +90,6 @@ public class LoginServiceImpl {
             log.warn("检测到异地登录，废弃当前 token，account={}, oldIp={}, newIp={}",
                     account, storedIp, realIp);
             StpUtil.logout();
-            if (storedIp != null) {
-                MailUtil.sendIpChangeAlertAsync(accountPO.getEmail(), account, storedIp, realIp);
-                alertAlreadySent = true;
-            }
         }
 
         String storedPassword = accountPO.getPassword();
@@ -123,7 +117,6 @@ public class LoginServiceImpl {
             return Result.failure(accountType.getValue() + "或密码错误");
         }
 
-        String oldIp = accountPO.getLastLoginIp();
         boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
                 .set(AccountPO::getLastLoginIp, realIp)
                 .eq(AccountPO::getAccount, account));
@@ -138,9 +131,6 @@ public class LoginServiceImpl {
         log.info("登录成功，email={}, mcUuid={}", accountPO.getEmail(), accountPO.getMcUuid());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
 
-        if (!alertAlreadySent && oldIp != null && !oldIp.equals(realIp))
-            MailUtil.sendIpChangeAlertAsync(accountPO.getEmail(), account, oldIp, realIp);
-        
         dispatchLoginEvent(account, token);
         return Result.succeed(tokenInfo);
     }

@@ -27,7 +27,6 @@ public final class MailUtil {
     private static final Map<String, String> TEMPLATE_CACHE = new ConcurrentHashMap<>();
 
     private static final String TPL_VERIFY_CODE = "email/RegVerifyCode.html";
-    private static final String TPL_IP_CHANGE_ALERT = "email/LoginIpChangeAlert.html";
     private static final String TPL_PASSWORD_RESET_NOTIFY = "email/PasswordResetNotify.html";
     private static final String TPL_SKIN_UPLOAD_FAILED = "email/SkinUploadFailed.html";
 
@@ -67,37 +66,6 @@ public final class MailUtil {
                 "<generatedcode/>", verifyCode,
                 "<time/>", LocalDate.now().format(DATE_FMT)
         ));
-    }
-
-    /**
-     * 异步发送异地登录提醒邮件。
-     *
-     * @param toEmail 收件人邮箱（为空则跳过）
-     * @param account 账号
-     * @param oldIp   上次登录 IP
-     * @param newIp   本次登录 IP
-     */
-    public static void sendIpChangeAlertAsync(String toEmail, String account, String oldIp, String newIp) {
-        if (toEmail == null || toEmail.isBlank()) {
-            log.debug("收件人为空，跳过异地登录提醒");
-            return;
-        }
-        String time = LocalDateTime.now().format(DATETIME_FMT);
-        String subject = "[" + serverName + "] 异地登录提醒";
-        IpLocationUtil.queryAsync(oldIp)
-                .thenCombine(IpLocationUtil.queryAsync(newIp), (oldLocation, newLocation) -> {
-                    sendTemplateAsync(toEmail, subject, TPL_IP_CHANGE_ALERT, Map.of(
-                            "<account/>", account,
-                            "<time/>", time,
-                            "<oldip/>", safe(oldIp),
-                            "<newip/>", safe(newIp),
-                            "<oldlocation/>", oldLocation,
-                            "<newlocation/>", newLocation
-                    ));
-                    log.debug("异地登录提醒邮件已发送，收件人: {}, 账号: {}, 旧 IP: {}, 新 IP: {}, 旧归属地: {}, 新归属地: {}",
-                            toEmail, account, oldIp, newIp, oldLocation, newLocation);
-                    return null;
-                });
     }
 
     /**

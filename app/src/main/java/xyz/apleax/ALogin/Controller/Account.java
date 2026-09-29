@@ -24,7 +24,6 @@ import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Service.AccountService;
-import xyz.apleax.ALogin.Util.IpLocationUtil;
 import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.VO.*;
 
@@ -111,7 +110,7 @@ public class Account {
     }
 
     @Mapping(path = "/RefreshCache", method = MethodType.POST,
-            name = "刷新缓存", description = "清空账号、账号索引、IP 属地和邮件模板缓存，保留验证码与登录会话")
+            name = "刷新缓存", description = "清空账号、账号索引和邮件模板缓存，保留验证码与登录会话")
     public Result<Boolean> RefreshCache(Context context) {
         StpUtil.checkLogin();
         String account = StpUtil.getLoginIdAsString();
@@ -122,7 +121,6 @@ public class Account {
 
         accountCache.invalidateAll();
         accountIndexCache.invalidateAll();
-        IpLocationUtil.clearCache();
         MailUtil.clearTemplateCache();
         log.info("业务缓存刷新成功，account={}", account);
         return Result.succeed(true);
