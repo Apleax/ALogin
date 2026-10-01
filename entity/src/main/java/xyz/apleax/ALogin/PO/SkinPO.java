@@ -2,11 +2,11 @@ package xyz.apleax.ALogin.PO;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.ibatis.type.BlobTypeHandler;
+import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 
 import java.util.UUID;
 
@@ -24,12 +24,12 @@ public class SkinPO {
     /**
      * 服务器内uuid
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = UuidTypeHandler.class)
     private UUID mcUuid;
     /**
      * 皮肤数据
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = UuidTypeHandler.class)
     private UUID skinUuid;
     /**
      * 皮肤文件

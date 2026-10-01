@@ -45,9 +45,8 @@ public class SkinPersistenceService {
     @Transaction
     public void writeSkinAndAccount(String account, UUID mcUuid, UUID skinUuid, byte[] skinData,
                                     List<GameProfile.Property> properties) {
-        String mcUuidJson = "\"" + mcUuid + "\"";
         SkinPO existingSkin = skinService.getOne(new LambdaQueryWrapper<SkinPO>()
-                .eq(SkinPO::getMcUuid, mcUuidJson));
+                .eq(SkinPO::getMcUuid, mcUuid));
 
         SkinPO updateSkin = new SkinPO();
         updateSkin.setSkinUuid(skinUuid);
@@ -67,7 +66,7 @@ public class SkinPersistenceService {
                 if (!isDuplicateKey(e)) throw e;
                 log.warn("皮肤并发上传撞唯一键，回退为 update: mcUuid={}", mcUuid);
                 skinUpdated = skinService.update(updateSkin, new LambdaUpdateWrapper<SkinPO>()
-                        .eq(SkinPO::getMcUuid, mcUuidJson));
+                        .eq(SkinPO::getMcUuid, mcUuid));
             }
         }
 

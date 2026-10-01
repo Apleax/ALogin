@@ -46,7 +46,7 @@ public class AccountPO {
     /**
      * 服务器内uuid
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = UuidTypeHandler.class)
     private UUID mcUuid;
     /**
      * 玩家档案
