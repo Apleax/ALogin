@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin.Service.User;
 
+import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -43,12 +44,19 @@ public class GameProfileServiceImpl {
     public GameProfile GameProfile(String token, String uuid, String playerIp) {
         String account;
         AccountPO accountPO;
-        if (!token.isBlank()) account = (String) StpUtil.getLoginIdByToken(token);
-        else account = accountIndexCache.get(new AccountIndexCache(AccountType.UUID, uuid));
+        if (token != null && !token.isBlank()) {
+            try {
+                account = (String) StpUtil.getLoginIdByToken(token);
+            } catch (NotLoginException e) {
+                return null;
+            }
+        } else {
+            account = accountIndexCache.get(new AccountIndexCache(AccountType.UUID, uuid));
+        }
         if (account == null) return null;
         accountPO = accountCache.get(account);
         if (accountPO == null) return null;
-        if (!token.isBlank()) updateLastLoginIp(account, playerIp);
+        if (token != null && !token.isBlank()) updateLastLoginIp(account, playerIp);
         List<GameProfile.Property> properties = accountPO.getProperties();
         if (properties == null) properties = Collections.emptyList();
         return new GameProfile(

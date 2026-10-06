@@ -1,6 +1,8 @@
 package xyz.apleax.ALogin.PO;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +22,10 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SkinPO {
+    /**
+     * 雪花主键（与表结构无 AUTO_INCREMENT 匹配，见 SQL 模板）
+     */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /**
      * 服务器内uuid

@@ -10,7 +10,7 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.validation.annotation.Valid;
 import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
 import xyz.apleax.ALogin.POJO.PremiumFlowStatus;
-import xyz.apleax.ALogin.Service.PremiumService;
+import xyz.apleax.ALogin.Service.Remote.PremiumService;
 
 /**
  * 正版（微软设备码授权）Controller

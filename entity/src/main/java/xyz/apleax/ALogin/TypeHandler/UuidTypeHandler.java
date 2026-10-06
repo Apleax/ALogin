@@ -40,23 +40,23 @@ public class UuidTypeHandler extends BaseTypeHandler<UUID> {
 
     @Override
     public UUID getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        return toUuid(rs.getString(columnName));
+        return parse(rs.getString(columnName));
     }
 
     @Override
     public UUID getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-        return toUuid(rs.getString(columnIndex));
+        return parse(rs.getString(columnIndex));
     }
 
     @Override
     public UUID getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-        return toUuid(cs.getString(columnIndex));
+        return parse(cs.getString(columnIndex));
     }
 
     /**
      * 解析 UUID；兼容引号与 32 位格式，非法值记日志并返回 null。
      */
-    private UUID toUuid(String value) {
+    public static UUID parse(String value) {
         if (value == null || value.isBlank()) return null;
         String uuid = value.trim();
         if (uuid.length() >= 2 && uuid.charAt(0) == '"' && uuid.charAt(uuid.length() - 1) == '"')

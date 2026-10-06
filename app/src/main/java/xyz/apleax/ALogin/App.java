@@ -21,6 +21,9 @@ public class App {
 
     private static final File BASE_DIR = new File(".");
 
+    /**
+     * 启动入口；CORS 通配来源时不带凭证（fetch 规范不允许 allow-origin=* 与凭证同用）
+     */
     static void main(String[] args) {
         Solon.start(App.class, args, app -> {
             if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
@@ -53,9 +56,13 @@ public class App {
             Solon.cfg().loadAdd(configPath);
 
             String cross = Solon.cfg().get("cross.allow-origin", "*");
-            app.router().filter(-1, new CrossFilter()
-                    .allowedOrigins(cross.isEmpty() ? "*" : cross)
-                    .allowCredentials(true));
+            if (cross == null || cross.isBlank() || "*".equals(cross)) {
+                app.router().filter(-1, new CrossFilter().allowedOrigins("*"));
+            } else {
+                app.router().filter(-1, new CrossFilter()
+                        .allowedOrigins(cross)
+                        .allowCredentials(true));
+            }
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }

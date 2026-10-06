@@ -14,6 +14,7 @@ import org.noear.dami2.Dami;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
+import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
@@ -42,7 +43,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Managed
 @DamiTopic("premium")
-public class PremiumServiceImpl {
+public class PremiumServiceImpl implements LifecycleBean {
     private static final long AUTO_LOGIN_TOKEN_TTL_SECONDS = 60;
     /**
      * 设备码授权流程状态（过期自动清理）
@@ -51,7 +52,7 @@ public class PremiumServiceImpl {
             .maximumSize(1_000)
             .expireAfterWrite(Duration.ofMinutes(20))
             .build();
-    private static final ExecutorService FLOW_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService flowExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final PremiumOAuthService oauthService;
     private final PremiumAssertionService assertionService;
@@ -69,6 +70,11 @@ public class PremiumServiceImpl {
         this.accountService = accountService;
         this.accountCache = accountCache;
         this.accountIndexCache = accountIndexCache;
+    }
+
+    @Override
+    public void stop() {
+        flowExecutor.shutdownNow();
     }
 
     /**
@@ -126,7 +132,14 @@ public class PremiumServiceImpl {
         String flowKey = RandomStringUtils.generateLowerUpper(32);
         Flow flow = new Flow(type, account, gameToken, realIp, deviceCode.deviceCode());
         FLOWS.put(flowKey, flow);
-        FLOW_EXECUTOR.submit(() -> pollUntilDone(flow, deviceCode));
+        flowExecutor.submit(() -> {
+            try {
+                pollUntilDone(flow, deviceCode);
+            } catch (Exception e) {
+                log.error("设备码轮询异常，type={}, flowKey={}", type, flowKey, e);
+                flow.fail("授权服务异常，请重试");
+            }
+        });
         log.info("已发起正版设备码授权，type={}, account={}, 有效期={}秒",
                 type, account, deviceCode.expiresInSeconds());
         return Result.succeed(new PremiumDeviceCode(flowKey, deviceCode.userCode(),
@@ -202,7 +215,7 @@ public class PremiumServiceImpl {
         boolean updated;
         try {
             updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
-                    .set(AccountPO::getPremiumUuid, profile.uuid().toString())
+                    .set(AccountPO::getPremiumUuid, profile.uuid())
                     .set(AccountPO::getPremiumName, profile.name())
                     .eq(AccountPO::getAccount, account));
         } catch (RuntimeException e) {
@@ -243,7 +256,9 @@ public class PremiumServiceImpl {
      * 一键登录：按正版 UUID 找到账号并通知登录服放行
      */
     private Result<PremiumProfile> login(String token, PremiumProfile profile, String realIp) {
-        if (realIp == null || realIp.isBlank()) return Result.failure("无法获取客户端 IP，请稍后再试");
+        if (realIp == null || realIp.isBlank() || realIp.length() > 45 || realIp.indexOf('/') >= 0
+                || realIp.chars().anyMatch(Character::isWhitespace))
+            return Result.failure("无法获取客户端 IP，请稍后再试");
         String account = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
         if (account == null) return Result.failure("该正版账号尚未绑定 ALogin 账号，请先在网页登录后绑定");
@@ -267,36 +282,37 @@ public class PremiumServiceImpl {
         String token = SaTempUtil.createToken(playerUuid, AUTO_LOGIN_TOKEN_TTL_SECONDS, true);
         log.info("正版自动登录，account={}, premiumUuid={}, name={}, ip={}",
                 account, profile.uuid(), profile.name(), realIp);
-        SaTokenContextMockUtil.setMockContext();
-        try {
-            return completeLogin(account, accountPO, realIp, token, profile);
-        } finally {
-            SaTokenContextMockUtil.clearContext();
-        }
+        return completeLogin(account, accountPO, realIp, token, profile);
     }
 
     /**
-     * 正版登录收尾：记录 IP/名称、置登录态并触发 LoginEvent 放行
+     * 正版登录收尾：记录 IP/名称、置登录态并触发 LoginEvent 放行。
+     * 在轮询线程执行时无 sa-token 上下文，统一使用 mock 上下文。
      */
     private Result<PremiumProfile> completeLogin(String account, AccountPO accountPO, String realIp,
                                                  String token, PremiumProfile profile) {
-        if (!Objects.equals(profile.name(), accountPO.getPremiumName())
-                && updatePremiumName(account, profile.name()))
-            log.info("正版名称变更已同步，account={}, premiumName={}", account, profile.name());
-        if (realIp != null && !realIp.isBlank()) {
-            boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
-                    .set(AccountPO::getLastLoginIp, realIp)
-                    .eq(AccountPO::getAccount, account));
-            if (!updated) {
-                log.error("更新最后登录 IP 失败，拒绝正版登录，account={}", account);
-                return Result.failure("登录失败，请稍后再试");
+        SaTokenContextMockUtil.setMockContext();
+        try {
+            if (!Objects.equals(profile.name(), accountPO.getPremiumName())
+                    && updatePremiumName(account, profile.name()))
+                log.info("正版名称变更已同步，account={}, premiumName={}", account, profile.name());
+            if (realIp != null && !realIp.isBlank()) {
+                boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+                        .set(AccountPO::getLastLoginIp, realIp)
+                        .eq(AccountPO::getAccount, account));
+                if (!updated) {
+                    log.error("更新最后登录 IP 失败，拒绝正版登录，account={}", account);
+                    return Result.failure("登录失败，请稍后再试");
+                }
+                accountCache.invalidate(account);
             }
-            accountCache.invalidate(account);
+            StpUtil.login(account, AccountType.PREMIUM_UUID.getKey());
+            Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
+            log.info("正版登录成功，account={}, premiumUuid={}, name={}", account, profile.uuid(), profile.name());
+            return Result.succeed(profile);
+        } finally {
+            SaTokenContextMockUtil.clearContext();
         }
-        StpUtil.login(account, AccountType.PREMIUM_UUID.getKey());
-        Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
-        log.info("正版登录成功，account={}, premiumUuid={}, name={}", account, profile.uuid(), profile.name());
-        return Result.succeed(profile);
     }
 
     /**

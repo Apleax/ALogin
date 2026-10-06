@@ -21,6 +21,7 @@ import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
+import org.noear.solon.core.bean.LifecycleBean;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.PremiumAssertion;
@@ -28,6 +29,9 @@ import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -37,11 +41,16 @@ import java.util.Map;
 @Slf4j
 @Managed(index = -999)
 @Condition(onClass = MinecraftServer.class)
-public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSpawnEvent> {
+public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSpawnEvent>, LifecycleBean {
     /**
      * 自动登录时延迟展示兜底链接的时间（正常情况此刻玩家已进游戏）
      */
     private static final long AUTO_LOGIN_LINK_DELAY_MILLIS = 8_000L;
+
+    /**
+     * 正版自动登录执行器：Dami 同步分发会执行数据库操作，不能在 tick 线程上跑
+     */
+    private final ExecutorService autoLoginExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final PremiumAssertionService assertionService;
     private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
@@ -50,6 +59,11 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
                                     @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache) {
         this.assertionService = assertionService;
         this.accountIndexCache = accountIndexCache;
+    }
+
+    @Override
+    public void stop() {
+        autoLoginExecutor.shutdownNow();
     }
 
     @Override
@@ -71,15 +85,24 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
                 Component.text("无法打开网页或使用基岩版时可使用指令: /l [邮箱] [密码登录]", TextColor.color(152, 251, 152)).appendNewline()
         ).build();
 
-        boolean autoLogin = requestAutoLogin(player);
-        if (autoLogin)
+        AtomicLong linkVisibleAt = new AtomicLong(0L);
+        if (assertionService.get(player.getUuid()) != null) {
             player.sendMessage(Component.text("已识别正版账号，正在自动进入服务器…", TextColor.color(152, 251, 152)));
-        // 自动登录时延迟展示兜底链接：正常情况此刻玩家已进游戏
-        final long linkVisibleAt = autoLogin ? System.currentTimeMillis() + AUTO_LOGIN_LINK_DELAY_MILLIS : 0L;
+            // 自动登录时延迟展示兜底链接：正常情况此刻玩家已进游戏
+            linkVisibleAt.set(System.currentTimeMillis() + AUTO_LOGIN_LINK_DELAY_MILLIS);
+            autoLoginExecutor.submit(() -> {
+                try {
+                    if (!requestAutoLogin(player)) linkVisibleAt.set(0L);
+                } catch (Exception e) {
+                    log.warn("正版自动登录触发异常，player={}: {}", player.getUuid(), e.getMessage());
+                    linkVisibleAt.set(0L);
+                }
+            });
+        }
 
         Scheduler scheduler = player.scheduler();
         Task tips = scheduler.submitTask(() -> {
-            if (System.currentTimeMillis() >= linkVisibleAt) player.sendMessage(linkComponent);
+            if (System.currentTimeMillis() >= linkVisibleAt.get()) player.sendMessage(linkComponent);
             return TaskSchedule.seconds(10);
         });
         scheduler.scheduleTask(() -> {

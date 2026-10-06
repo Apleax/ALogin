@@ -82,8 +82,8 @@ DataBase:
 
 Security:
   encryption:
-    # 加密算法: SHA256, SHA512, Argon2
-    algorithm: SHA512
+    # 加密算法: SHA256, SHA512, Argon2（新注册账号使用；存量账号按各自记录中的算法验证）
+    algorithm: Argon2
 
 # 正版（微软设备码授权 + 免密断言）配置块
 # 设备码授权借用 Minecraft 启动器官方凭据，无需 Azure 应用注册，因此没有 oauth 配置项

@@ -8,7 +8,7 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.MethodType;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.validation.annotation.Valid;
-import xyz.apleax.ALogin.Service.PremiumService;
+import xyz.apleax.ALogin.Service.Remote.PremiumService;
 
 /**
  * 正版相关的内部接口（供 ViaProxy 插件调用，密钥即 Premium.assertion.secret）

@@ -8,7 +8,7 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.MethodType;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.validation.annotation.Valid;
-import xyz.apleax.ALogin.Service.BedrockService;
+import xyz.apleax.ALogin.Service.Remote.BedrockService;
 import xyz.apleax.ALogin.VO.BedrockAutoLoginVO;
 import xyz.apleax.ALogin.VO.BedrockBindVO;
 
@@ -33,6 +33,7 @@ public class BedrockInternal {
     @Mapping(path = "/AutoLogin", method = MethodType.POST,
             name = "基岩版免密登录", description = "按 XUID 找到已绑定账号并返回可用的 sa-token，供扩展写入进服 cookie")
     public Result<String> AutoLogin(BedrockAutoLoginVO body, Context context) {
+        if (body == null) return Result.failure("请求体为空");
         return bedrockService.autoLogin(context.header(KEY_HEADER), body.getXuid(), body.getName());
     }
 
@@ -40,6 +41,7 @@ public class BedrockInternal {
     @Mapping(path = "/Bind", method = MethodType.POST,
             name = "基岩版绑定", description = "把 XUID 绑定到刚完成密码登录的账号（token 证明账号、密钥证明调用方）")
     public Result<Boolean> Bind(BedrockBindVO body, Context context) {
+        if (body == null) return Result.failure("请求体为空");
         return bedrockService.bind(context.header(KEY_HEADER), body.getToken(), body.getXuid(), body.getName());
     }
 }

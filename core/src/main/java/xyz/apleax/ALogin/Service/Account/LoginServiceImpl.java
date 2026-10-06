@@ -53,6 +53,9 @@ public class LoginServiceImpl {
         this.selector = selector;
     }
 
+    /**
+     * 登录；免密快捷路径仅在会话归属该账号时生效（防止同 IP 下借他人会话冒充登录）
+     */
     @Transaction
     public Result<SaTokenInfo> login(LoginBO loginBO, String token) {
         if (loginBO == null) return Result.failure("请求参数缺失");
@@ -65,8 +68,10 @@ public class LoginServiceImpl {
         String rawPassword = loginBO.getPassword();
         if (rawPassword == null || rawPassword.isEmpty()) return Result.failure("密码不能为空");
         String realIp = loginBO.getReal_ip();
-        if (realIp == null || realIp.isBlank()) {
-            log.warn("登录请求缺失 real_ip，已拒绝");
+        if (realIp == null || realIp.isBlank()
+                || realIp.length() > 45 || realIp.indexOf('/') >= 0
+                || realIp.chars().anyMatch(Character::isWhitespace)) {
+            log.warn("登录请求携带缺失或非法的 real_ip，已拒绝，len={}", realIp == null ? 0 : realIp.length());
             return Result.failure("无法获取客户端 IP，请稍后再试");
         }
 
@@ -78,7 +83,8 @@ public class LoginServiceImpl {
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return Result.failure(accountType.getValue() + "或密码错误");
 
-        if (StpUtil.isLogin()) {
+        String currentLoginId = StpUtil.isLogin() ? StpUtil.getLoginIdAsString() : null;
+        if (account.equals(currentLoginId)) {
             String storedIp = accountPO.getLastLoginIp();
             if (storedIp != null && storedIp.equals(realIp)) {
                 StpUtil.updateLastActiveToNow();

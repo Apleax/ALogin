@@ -31,7 +31,7 @@ final class ALoginClient {
     private final ExtensionLogger logger;
 
     ALoginClient(String baseUrl, Settings.Header extraHeader, ExtensionLogger logger) {
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.baseUrl = baseUrl.replaceFirst("/+$", "");
         this.extraHeader = extraHeader;
         this.logger = logger;
     }
@@ -99,10 +99,13 @@ final class ALoginClient {
         JsonElement data = isOk(body) ? body.get("data") : null;
         if (data != null) {
             String token = null;
-            if (data.isJsonObject() && data.getAsJsonObject().has("tokenValue"))
-                token = data.getAsJsonObject().get("tokenValue").getAsString();
-            else if (data.isJsonPrimitive() && data.getAsJsonPrimitive().isString())
+            if (data.isJsonObject()) {
+                JsonElement tokenValue = data.getAsJsonObject().get("tokenValue");
+                if (tokenValue != null && tokenValue.isJsonPrimitive() && tokenValue.getAsJsonPrimitive().isString())
+                    token = tokenValue.getAsString();
+            } else if (data.isJsonPrimitive() && data.getAsJsonPrimitive().isString()) {
                 token = data.getAsString();
+            }
             if (token != null && !token.isBlank()) return new Result(token, null);
         }
         return new Result(null, message(body, action + "失败"));
@@ -131,12 +134,18 @@ final class ALoginClient {
     }
 
     private static boolean isOk(JsonObject body) {
-        return body.has("code") && body.get("code").getAsInt() == 200;
+        JsonElement code = body.get("code");
+        return code != null && code.isJsonPrimitive() && code.getAsJsonPrimitive().isNumber()
+                && code.getAsInt() == 200;
     }
 
     private static String message(JsonObject body, String fallback) {
-        return body.has("description") && !body.get("description").getAsString().isBlank()
-                ? body.get("description").getAsString() : fallback;
+        JsonElement desc = body.get("description");
+        if (desc != null && desc.isJsonPrimitive() && desc.getAsJsonPrimitive().isString()) {
+            String text = desc.getAsString();
+            if (text != null && !text.isBlank()) return text;
+        }
+        return fallback;
     }
 
     private static JsonObject parseObject(String body) {

@@ -1,6 +1,8 @@
 package xyz.apleax.ALogin.PO;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.AllArgsConstructor;
@@ -22,6 +24,10 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AccountPO {
+    /**
+     * 雪花主键（与表结构无 AUTO_INCREMENT 匹配，见 SQL 模板）
+     */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /**
      * 账号

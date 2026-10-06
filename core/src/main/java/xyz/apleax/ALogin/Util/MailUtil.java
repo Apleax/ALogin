@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin.Util;
 
+import jakarta.mail.Message;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
@@ -8,6 +9,7 @@ import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.util.ResourceUtil;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.email.EmailBuilder;
+import org.simplejavamail.recipient.RecipientBuilder;
 
 import java.net.URL;
 import java.time.LocalDate;
@@ -133,6 +135,10 @@ public final class MailUtil {
             log.warn("发件人邮箱未配置，无法发送邮件，收件人: {}", toEmail);
             return false;
         }
+        if (mailer == null) {
+            log.warn("邮件发送器未初始化，无法发送邮件，收件人: {}", toEmail);
+            return false;
+        }
         String html = buildHtml(templateRelativePath, placeholders, fallbackHtml);
         if (html == null || html.isBlank()) {
             log.warn("邮件正文为空，跳过发送，收件人: {}", toEmail);
@@ -141,8 +147,12 @@ public final class MailUtil {
         try {
             mailer.sendMail(EmailBuilder.startingBlank()
                                     .from(fromName, fromEmail)
+                                    .withRecipients(new RecipientBuilder()
+                                            .withAddress(toEmail)
+                                            .withType(Message.RecipientType.TO)
+                                            .build()
+                                    )
                                     .withSubject(subject)
-                                    .to(toEmail)
                                     .withHTMLText(html)
                                     .buildEmail()
                             , true)

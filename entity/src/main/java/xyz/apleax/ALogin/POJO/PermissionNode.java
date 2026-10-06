@@ -1,6 +1,5 @@
 package xyz.apleax.ALogin.POJO;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,9 +14,9 @@ import java.util.Map;
  *
  * @author Apleax
  */
-@Getter(value = AccessLevel.PRIVATE)
-@Setter(value = AccessLevel.PRIVATE)
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@NoArgsConstructor
 public class PermissionNode {
 
     public static final List<String> DEFAULT_NODE = List.of("default");

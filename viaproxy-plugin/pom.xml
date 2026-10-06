@@ -5,21 +5,26 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-      ALogin 正版免密断言的 ViaProxy 插件（独立工程，不参与 ALogin 主构建）。
+      ALogin 正版免密断言的 ViaProxy 插件。与主工程无模块依赖，仅共享父 POM 的版本管理。
 
       依赖的 ViaProxy 为 provided（仅编译期使用，运行期由 ViaProxy 自带）：
         mvn install:install-file -Dfile=ViaProxy-<版本>.jar -DgroupId=net.raphimc -DartifactId=viaproxy \
             -Dversion=<版本> -Dpackaging=jar
       产物：target/ALogin-viaproxy-plugin-<版本>.jar，丢进 ViaProxy 的 plugins/ 目录即可。
     -->
-    <groupId>xyz.apleax</groupId>
+    <parent>
+        <groupId>xyz.apleax</groupId>
+        <artifactId>ALogin</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <artifactId>ALogin-viaproxy-plugin</artifactId>
-    <version>0.1.0</version>
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- 由 ViaProxy 所在 JVM 加载，编译到 Java 17 以匹配其运行环境 -->
+        <java.version>17</java.version>
         <viaproxy.version>3.4.14</viaproxy.version>
     </properties>
 

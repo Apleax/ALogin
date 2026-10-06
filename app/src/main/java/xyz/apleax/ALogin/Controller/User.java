@@ -12,7 +12,7 @@ import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
 import xyz.apleax.ALogin.POJO.GameProfile;
-import xyz.apleax.ALogin.Service.UserService;
+import xyz.apleax.ALogin.Service.Remote.UserService;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
@@ -51,6 +51,9 @@ public class User {
         return userService.changeNickName(nickname);
     }
 
+    /**
+     * 校验Token并获取玩家配置；uuid 分支供服务器插件按 UUID 取皮肤数据，无会话凭证
+     */
     @SaIgnore
     @Mapping(path = "/GameProfile", method = MethodType.POST,
             name = "校验Token", description = "校验Token并获取玩家配置")
@@ -61,7 +64,7 @@ public class User {
         }
         GameProfile profile = null;
         if (token != null && !token.isBlank()) profile = userService.GameProfile(token, "", playerIp);
-        if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid, playerIp);
+        else if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid, playerIp);
         if (profile == null) ctx.status(400);
         else ctx.status(200);
         return profile;

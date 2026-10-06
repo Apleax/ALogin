@@ -15,6 +15,7 @@ import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import java.net.http.HttpClient;
@@ -90,12 +91,12 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                         case ACCOUNT -> queryWrapper.eq(AccountPO::getAccount, Type.value());
                         case EMAIL -> queryWrapper.eq(AccountPO::getEmail, Type.value());
                         case QQ_ACCOUNT -> queryWrapper.eq(AccountPO::getQqAccount, Type.value());
-                        case UUID -> queryWrapper.eq(AccountPO::getMcUuid, Type.value());
-                        case PREMIUM_UUID -> queryWrapper.eq(AccountPO::getPremiumUuid, Type.value());
+                        case UUID -> queryWrapper.eq(AccountPO::getMcUuid, UuidTypeHandler.parse(Type.value()));
+                        case PREMIUM_UUID -> queryWrapper.eq(AccountPO::getPremiumUuid, UuidTypeHandler.parse(Type.value()));
                         case BEDROCK_XUID -> queryWrapper.eq(AccountPO::getBedrockXuid, Type.value());
                     }
-                    if (!accountService.exists(queryWrapper)) return null;
-                    return accountService.getOne(queryWrapper).getAccount();
+                    AccountPO accountPO = accountService.getOne(queryWrapper);
+                    return accountPO == null ? null : accountPO.getAccount();
                 });
     }
 

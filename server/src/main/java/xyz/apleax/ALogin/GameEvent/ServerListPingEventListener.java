@@ -50,7 +50,7 @@ public class ServerListPingEventListener implements EventListener<@NotNull Serve
                 .description(currentMotd())
                 .favicon(currentFavicon())
                 .playerInfo(Status.PlayerInfo.onlineCount())
-                .versionInfo(new Status.VersionInfo("1.21.11-26.2", event.getConnection().getProtocolVersion()))
+                .versionInfo(new Status.VersionInfo(MinecraftServer.VERSION_NAME, event.getConnection().getProtocolVersion()))
                 .build());
         return Result.SUCCESS;
     }

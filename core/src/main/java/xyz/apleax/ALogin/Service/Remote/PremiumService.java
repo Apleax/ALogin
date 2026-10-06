@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Remote;
 
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.core.handle.Result;
@@ -6,7 +6,7 @@ import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
 import xyz.apleax.ALogin.POJO.PremiumFlowStatus;
 
 /**
- * 正版（微软设备码授权）服务
+ * 正版（微软设备码授权）服务契约（Dami LPC topic: premium）
  *
  * @author Apleax
  */

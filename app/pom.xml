@@ -29,6 +29,71 @@
             <artifactId>ALogin-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- Solon核心包 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-lib</artifactId>
+        </dependency>
+        <!-- Http 启动器 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-server-smarthttp</artifactId>
+        </dependency>
+        <!-- Json序列化支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-serialization-jackson</artifactId>
+        </dependency>
+        <!-- 本地SessionSate支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-sessionstate-local</artifactId>
+        </dependency>
+        <!-- 静态文件支持插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-web-staticfiles</artifactId>
+        </dependency>
+        <!-- 跨域处理插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-web-cors</artifactId>
+        </dependency>
+        <!-- 参数与实体验证扩展插件 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-security-validation</artifactId>
+        </dependency>
+        <!-- 日志 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-logging-logback-jakarta</artifactId>
+        </dependency>
+        <!-- banner打印 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-config-banner</artifactId>
+        </dependency>
+        <!-- mapstruct-plus对象拷贝 -->
+        <dependency>
+            <groupId>org.dromara.solon-plugins</groupId>
+            <artifactId>mapstruct-plus-solon-plugin</artifactId>
+        </dependency>
+        <!-- 多模块通信 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>dami2-solon-plugin</artifactId>
+        </dependency>
+        <!-- Sa-Token -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-solon-plugin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,10 +1,10 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Remote;
 
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.core.handle.Result;
 
 /**
- * 基岩版（XUID）免密登录与绑定服务
+ * 基岩版（XUID）免密登录与绑定服务契约（Dami LPC topic: bedrock）
  *
  * @author Apleax
  */

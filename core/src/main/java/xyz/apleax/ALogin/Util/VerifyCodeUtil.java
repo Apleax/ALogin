@@ -16,6 +16,8 @@ import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 @Slf4j
 @Managed
 public final class VerifyCodeUtil {
+    private static final int MAX_ATTEMPTS = 5;
+
     @Inject("VerifyCode")
     private static LoadingCache<@NotNull VerifyCodeKey, VerifyCodePOJO> verifyCodeCache;
 
@@ -27,13 +29,14 @@ public final class VerifyCodeUtil {
      *
      * @param email      收件人邮箱
      * @param verifyCode 验证码
+     * @return 是否成功提交发送
      */
-    public static void sendAsync(String email, String verifyCode) {
-        MailUtil.sendVerifyCodeAsync(email, verifyCode);
+    public static boolean sendAsync(String email, String verifyCode) {
+        return MailUtil.sendVerifyCodeAsync(email, verifyCode);
     }
 
     /**
-     * 校验验证码
+     * 校验验证码；通过后原子消费（防止同一验证码被并发双花），连续失败达到阈值则锁定
      *
      * @param key        验证码缓存键
      * @param verifyCode 验证码
@@ -46,10 +49,13 @@ public final class VerifyCodeUtil {
             return true;
         }
         if (verifyCode == null || !code.getVerifyCode().equals(verifyCode.trim())) {
+            if (code.recordFailure(MAX_ATTEMPTS)) {
+                verifyCodeCache.invalidate(key);
+                log.warn("验证码错误次数过多已锁定，key={}", key);
+            }
             log.debug("验证码校验失败：验证码不匹配，key={}", key);
             return true;
         }
-        verifyCodeCache.invalidate(key);
-        return false;
+        return !verifyCodeCache.asMap().remove(key, code);
     }
 }

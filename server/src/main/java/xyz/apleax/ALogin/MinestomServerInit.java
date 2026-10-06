@@ -35,7 +35,8 @@ public class MinestomServerInit {
     public void init() {
         MinecraftServer server = MinecraftServer.init(new Auth.Offline());
         server.start(new InetSocketAddress(port));
-        MinecraftServer.getExceptionManager().setExceptionHandler((throwable) -> log.debug("Exception caught by Minestom: {}", throwable.getMessage()));
+        MinecraftServer.getExceptionManager().setExceptionHandler(
+                (throwable) -> log.warn("Minestom 捕获异常", throwable));
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
         Solon.context().wrapAndPut(InstanceManager.class, instanceManager);
         Solon.context().wrapAndPut(InstanceContainer.class, instanceManager.createInstanceContainer(DimensionType.THE_END));

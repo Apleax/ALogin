@@ -56,17 +56,17 @@ public class AsyncPlayerPreLoginEventListener implements EventListener<@NotNull 
         CompletableFuture<LoginPlugin.Response> future = event.sendPluginRequest(
                 assertionService.channel(), challenge.getBytes(StandardCharsets.UTF_8));
         // 自行兜底：登录插件消息无人应答时，Minestom 的 awaitReplies(5s) 超时会踢人
-        future.completeOnTimeout(null, assertionService.timeoutMs(), TimeUnit.MILLISECONDS);
         log.debug("已下发正版断言挑战，player={}", name);
-        future.thenAccept(response -> {
-            try {
-                byte[] payload = response == null ? null : response.payload();
-                log.debug("正版断言应答，player={}, 载荷={}", name, payload == null ? "无" : payload.length + " 字节");
-                PremiumAssertion assertion = assertionService.verify(challenge, name, payload);
-                if (assertion != null) assertionService.stash(sessionUuid, assertion);
-            } catch (Exception e) {
-                log.warn("正版断言处理异常：{}", e.getMessage());
-            }
-        });
+        future.completeOnTimeout(null, assertionService.timeoutMs(), TimeUnit.MILLISECONDS)
+                .thenAccept(response -> {
+                    try {
+                        byte[] payload = response == null ? null : response.payload();
+                        log.debug("正版断言应答，player={}, 载荷={}", name, payload == null ? "无" : payload.length + " 字节");
+                        PremiumAssertion assertion = assertionService.verify(challenge, name, payload);
+                        if (assertion != null) assertionService.stash(sessionUuid, assertion);
+                    } catch (Exception e) {
+                        log.warn("正版断言处理异常：{}", e.getMessage());
+                    }
+                });
     }
 }

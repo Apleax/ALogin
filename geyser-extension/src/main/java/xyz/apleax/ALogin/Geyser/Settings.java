@@ -3,6 +3,7 @@ package xyz.apleax.ALogin.Geyser;
 import org.geysermc.geyser.api.extension.ExtensionLogger;
 
 import java.io.Reader;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -73,9 +74,14 @@ public record Settings(HostPort bedrockAddress, HostPort bedrockTarget, HostPort
             return new Settings(null, null, null, DEFAULT_COOKIE_TTL_MILLIS, false, true, "", "alogin", null);
         }
         String aloginUrl = properties.getProperty("alogin-url", "").trim();
-        if (!aloginUrl.isEmpty() && !aloginUrl.startsWith("http://") && !aloginUrl.startsWith("https://")) {
-            logger.error("Ignored the invalid 'alogin-url' value '" + aloginUrl + "', expected http://host:port");
+        if (!aloginUrl.isEmpty() && !isValidUrl(aloginUrl)) {
+            logger.error("Ignored the invalid 'alogin-url' value '" + aloginUrl + "', expected http://host[:port]");
             aloginUrl = "";
+        }
+        String cookieKey = properties.getProperty("cookie-key", "alogin").trim();
+        if (!cookieKey.matches("[A-Za-z0-9][A-Za-z0-9._-]*(:[A-Za-z0-9._-]+)?")) {
+            logger.error("Ignored the invalid 'cookie-key' value '" + cookieKey + "', fall back to 'alogin'");
+            cookieKey = "alogin";
         }
         Settings settings = new Settings(
                 parse(properties, "bedrock-address", BEDROCK_DEFAULT_PORT, logger),
@@ -85,7 +91,7 @@ public record Settings(HostPort bedrockAddress, HostPort bedrockTarget, HostPort
                 parseFlag(properties, "form-login", false, logger),
                 parseFlag(properties, "xuid-autologin", true, logger),
                 aloginUrl,
-                properties.getProperty("cookie-key", "alogin").trim(),
+                cookieKey,
                 parseHeader(properties, logger));
         logger.info("bedrock-address=" + settings.bedrockAddress()
                 + ", bedrock-target=" + settings.bedrockTarget()
@@ -117,6 +123,16 @@ public record Settings(HostPort bedrockAddress, HostPort bedrockTarget, HostPort
         }
     }
 
+    /** 校验 URL 形如 http(s)://host[:port]，host 不可为空 */
+    private static boolean isValidUrl(String url) {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
+        try {
+            return URI.create(url).getHost() != null;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     /** 解析 cookie 暂存秒数, 非法值回退默认 */
     private static long parseCookieTtl(Properties properties, ExtensionLogger logger) {
         String value = properties.getProperty("cookie-ttl-seconds");
@@ -124,7 +140,12 @@ public record Settings(HostPort bedrockAddress, HostPort bedrockTarget, HostPort
             return DEFAULT_COOKIE_TTL_MILLIS;
         }
         try {
-            return Math.multiplyExact(Long.parseLong(value.trim()), 1000L);
+            long seconds = Long.parseLong(value.trim());
+            if (seconds < 1) {
+                logger.error("Ignored the invalid 'cookie-ttl-seconds' value '" + value + "', must be at least 1");
+                return DEFAULT_COOKIE_TTL_MILLIS;
+            }
+            return Math.multiplyExact(seconds, 1000L);
         } catch (ArithmeticException | NumberFormatException e) {
             logger.error("Ignored the invalid 'cookie-ttl-seconds' value '" + value + "', fall back to 60");
             return DEFAULT_COOKIE_TTL_MILLIS;
@@ -184,20 +205,34 @@ public record Settings(HostPort bedrockAddress, HostPort bedrockTarget, HostPort
     }
 
     /**
-     * 主机与端口, 支持省略端口
+     * 主机与端口, 支持省略端口与 IPv6 字面量（[::1]:19132）
      */
     public record HostPort(String host, int port) {
-        /** 解析 host[:port]: 值留空返回 null; 没有冒号时使用 defaultPort */
+        /**
+         * 解析 host[:port]: 值留空返回 null; 没有冒号时使用 defaultPort; 裸 IPv6 字面量无端口
+         */
         public static HostPort parse(String value, int defaultPort) {
             if (value == null || value.isBlank()) {
                 return null;
             }
             String trimmed = value.trim();
-            int index = trimmed.lastIndexOf(':');
-            if (index < 0) {
+            if (trimmed.startsWith("[")) {
+                int end = trimmed.indexOf(']');
+                if (end < 0) throw new IllegalArgumentException("missing ']'");
+                String host = trimmed.substring(1, end);
+                String rest = trimmed.substring(end + 1);
+                if (rest.isEmpty()) return new HostPort(host, defaultPort);
+                if (!rest.startsWith(":")) throw new IllegalArgumentException("invalid suffix after ']'");
+                return new HostPort(host, Integer.parseInt(rest.substring(1)));
+            }
+            int last = trimmed.lastIndexOf(':');
+            if (last < 0) {
                 return new HostPort(trimmed, defaultPort);
             }
-            return new HostPort(trimmed.substring(0, index), Integer.parseInt(trimmed.substring(index + 1)));
+            if (trimmed.indexOf(':') != last) {
+                return new HostPort(trimmed, defaultPort);
+            }
+            return new HostPort(trimmed.substring(0, last), Integer.parseInt(trimmed.substring(last + 1)));
         }
 
         /** 与 host:port 比较, 主机名不区分大小写 */

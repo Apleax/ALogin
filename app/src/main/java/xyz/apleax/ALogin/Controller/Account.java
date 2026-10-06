@@ -20,10 +20,11 @@ import xyz.apleax.ALogin.BO.AccountBO;
 import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.VerifyCodeType;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
-import xyz.apleax.ALogin.Service.AccountService;
+import xyz.apleax.ALogin.Service.Remote.AccountService;
 import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.VO.*;
 
@@ -39,6 +40,9 @@ import java.util.Map;
 @Controller
 @Mapping(path = "/api/web/account", produces = "application/json", consumes = "application/json")
 public class Account {
+    /**
+     * 缓存刷新特权账号（临时过渡，后续接入外部权限系统后替换）
+     */
     private static final String CACHE_REFRESH_ACCOUNT = "81271059";
 
     private final AccountService accountService;
@@ -67,19 +71,33 @@ public class Account {
     @Mapping(path = "/VerifyCode", method = MethodType.POST,
             name = "验证码", description = "获取一个验证码发送到请求的邮箱")
     public Result<Long> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
+        if (verifyCodeVO == null) return Result.failure("请求参数缺失");
         VerifyCodeKey verifyCodeKey = null;
         if (verifyCodeVO instanceof RegisterVerifyCodeVO registerVerifyCodeVO)
-            verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), registerVerifyCodeVO.getType());
+            verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), VerifyCodeType.REGISTER);
         if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO)
-            verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), resetPasswordVerifyCodeVO.getType());
+            verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), VerifyCodeType.RESET_PASSWORD);
+        if (verifyCodeKey == null) return Result.failure("请求参数缺失");
         return accountService.verifyCode(verifyCodeKey);
     }
 
     @SaIgnore
     @Transaction
-    @Mapping(path = "/Login/{token}?", method = MethodType.POST,
+    @Mapping(path = "/Login", method = MethodType.POST,
             name = "登录", description = "登录接口，用于登录账号")
-    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, String token) {
+    public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, Context ctx) {
+        return doLogin(loginVO, tokenOf(ctx));
+    }
+
+    @SaIgnore
+    @Transaction
+    @Mapping(path = "/Login/**", method = MethodType.POST,
+            name = "登录", description = "登录接口，用于登录账号")
+    public Result<SaTokenInfo> LoginWithToken(@Validated LoginVO loginVO, Context ctx) {
+        return doLogin(loginVO, tokenOf(ctx));
+    }
+
+    private Result<SaTokenInfo> doLogin(LoginVO loginVO, String token) {
         LoginBO loginBO = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
@@ -93,10 +111,25 @@ public class Account {
         return accountService.login(loginBO, token);
     }
 
+    /**
+     * 提取进服会话 token：优先查询参数，其次路径尾段（/Login/{token} 与 /Login/ 兼容）
+     */
+    private static String tokenOf(Context ctx) {
+        String token = ctx.param("token");
+        if (token != null && !token.isBlank()) return token;
+        String path = ctx.pathNew();
+        int idx = path.lastIndexOf("/Login/");
+        if (idx >= 0 && idx + 7 < path.length()) {
+            String tail = path.substring(idx + 7);
+            if (!tail.isBlank() && tail.indexOf('/') < 0) return tail;
+        }
+        return null;
+    }
+
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")
-    public Result<Void> Logout(String token) {
-        return accountService.logout(token);
+    public Result<Void> Logout() {
+        return accountService.logout(null);
     }
 
     @SaIgnore

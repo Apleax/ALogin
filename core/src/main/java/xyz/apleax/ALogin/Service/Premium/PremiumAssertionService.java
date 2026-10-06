@@ -52,6 +52,14 @@ public class PremiumAssertionService {
             .build();
 
     /**
+     * 已使用挑战（防断言重放；挑战随机生成，正常不应复用）
+     */
+    private static final Cache<String, Boolean> USED_CHALLENGES = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .build();
+
+    /**
      * 断言功能是否可用
      */
     public boolean isEnabled() {
@@ -157,6 +165,10 @@ public class PremiumAssertionService {
         UUID uuid = UUID.fromString(uuid32.replaceFirst(
                 "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{12})",
                 "$1-$2-$3-$4-$5"));
+        if (USED_CHALLENGES.asMap().putIfAbsent(challenge, Boolean.TRUE) != null) {
+            log.warn("正版断言挑战重复使用，拒绝重放");
+            return null;
+        }
         String realIp = normalizeIp(ip);
         log.info("正版断言校验通过：uuid={}, name={}, ip={}", uuid, name, realIp);
         return new PremiumAssertion(uuid, name, realIp, timestamp);

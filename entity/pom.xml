@@ -19,16 +19,30 @@
     </properties>
 
     <dependencies>
-        <!-- 获取皮肤 -->
+        <!-- PO 注解与类型处理器 -->
         <dependency>
-            <groupId>org.mineskin</groupId>
-            <artifactId>java-client</artifactId>
-            <version>3.2.6</version>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-solon-plugin</artifactId>
+        </dependency>
+        <!-- VO 参数校验注解 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-security-validation</artifactId>
+        </dependency>
+        <!-- 多态 VO 的 Jackson 注解 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <!-- 对象拷贝 -->
+        <dependency>
+            <groupId>org.dromara.solon-plugins</groupId>
+            <artifactId>mapstruct-plus-solon-plugin</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.mineskin</groupId>
-            <artifactId>java-client-jsoup</artifactId>
-            <version>3.2.6</version>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

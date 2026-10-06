@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 让基岩版玩家也能走"登录服 -> 代理"转移流程的 Geyser 扩展
@@ -25,6 +27,14 @@ public class ALoginTransferExtension implements Extension {
     private static final String FORM_TITLE = "登录";
     private static final String FORM_HINT = "输入邮箱与密码后提交";
     private static final String FORM_CLOSED_HINT = "登录后才能进入服务器, 请填写邮箱与密码";
+    /**
+     * XUID 补绑用的共享守护线程池（每个补绑任务会占用 socket 数秒）
+     */
+    private static final ExecutorService BIND_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread thread = new Thread(r, "ALogin-BedrockBind");
+        thread.setDaemon(true);
+        return thread;
+    });
     private final Map<String, PendingTransfer> pendingTransfers = new ConcurrentHashMap<>();
     /**
      * 刚被本扩展交接给代理的会话，加入服务器后不再弹登录表单
@@ -135,10 +145,8 @@ public class ALoginTransferExtension implements Extension {
         String token = new String(tokenBytes, StandardCharsets.UTF_8);
         if (token.isBlank()) return;
         String name = connection.bedrockUsername();
-        Thread thread = new Thread(() -> new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
-                .bindXuid(token, xuid, name), "ALogin-BedrockBind");
-        thread.setDaemon(true);
-        thread.start();
+        BIND_EXECUTOR.submit(() -> new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
+                .bindXuid(token, xuid, name));
     }
 
     /**
@@ -168,7 +176,7 @@ public class ALoginTransferExtension implements Extension {
     }
 
     /**
-     * 表单回调：校验输入后换取 token 并触发交接
+     * 表单回调：校验输入后换取 token 并触发交接；XUID 补绑失败不阻断交接
      */
     private void login(GeyserConnection connection, Settings current, String email, String password) {
         if (email == null || email.isBlank() || password == null || password.isBlank()) {
@@ -199,9 +207,14 @@ public class ALoginTransferExtension implements Extension {
             openLoginForm(connection, current, trimmedEmail, result.message());
             return;
         }
-        if (current.xuidAutologin() && !connection.xuid().isBlank())
-            new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
-                    .bindXuid(result.token(), connection.xuid(), connection.bedrockUsername());
+        if (current.xuidAutologin() && !connection.xuid().isBlank()) {
+            try {
+                new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
+                        .bindXuid(result.token(), connection.xuid(), connection.bedrockUsername());
+            } catch (RuntimeException e) {
+                logger().warning("XUID 绑定调用异常(" + connection.bedrockUsername() + "): " + e.getMessage());
+            }
+        }
         Map<String, byte[]> cookies = Map.of(current.cookieKey() + ":token",
                 result.token().getBytes(StandardCharsets.UTF_8));
         remember(connection.xuid(), new PendingTransfer(cookies, target.host(), target.port(),

@@ -40,3 +40,4 @@ replay_pid*.log
 
 ### AI 本地笔记目录（不入库） ###
 /docs/
+/core/src/test/

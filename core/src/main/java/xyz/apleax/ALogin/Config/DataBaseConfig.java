@@ -50,6 +50,9 @@ public class DataBaseConfig implements LifecycleBean {
         log.info("DataBaseConfig Loading Complete");
     }
 
+    /**
+     * 构建 DataSource；首次启用 vault 时的引导信息只打印到控制台，避免密钥落进日志文件
+     */
     @Managed(name = "DataBase", typed = true, index = -100)
     @Condition(onMissingBean = DataSource.class, onBean = VaultCoderImpl.class)
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
@@ -66,15 +69,18 @@ public class DataBaseConfig implements LifecycleBean {
         ds.setJdbcUrl(jdbcUrl);
         if (needGenerateVaultPassword) {
             log.info("""
-                            Vault password: {}
-                            Encrypt database name: {}
-                            Encrypt database username: {}
-                            Encrypt database password: {}""",
+                            ============ ALogin 数据库连接信息加密初始化 ============
+                              Vault password: {}
+                              Encrypt database name: {}
+                              Encrypt database username: {}
+                              Encrypt database password: {}
+                              请把以上内容填入配置文件，然后重启应用
+                              =================================================""",
                     vaultPassword,
                     VaultUtils.encrypt(dbProps.database()),
                     VaultUtils.encrypt(dbProps.username()),
                     VaultUtils.encrypt(dbProps.password()));
-            log.info("Fill in the above in the configuration file");
+            Solon.stop();
         }
         ds.setUsername(dbProps.username());
         ds.setPassword(dbProps.password());

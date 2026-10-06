@@ -34,15 +34,15 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <mybatis-plus.version>3.5.11</mybatis-plus.version>
-        <jsqlparser.version>3.5.11</jsqlparser.version>
-        <HikariCP.version>7.0.0</HikariCP.version>
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <jsqlparser.version>3.5.17</jsqlparser.version>
+        <HikariCP.version>7.1.0</HikariCP.version>
         <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
         <SQLServer-Driver.version>13.2.1.jre11</SQLServer-Driver.version>
-        <simple-java-mail>8.12.6</simple-java-mail>
+        <simple-java-mail>9.3.5</simple-java-mail>
         <sa-token.version>1.46.0</sa-token.version>
         <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
-        <caffeine.version>3.2.3</caffeine.version>
+        <caffeine.version>3.3.0</caffeine.version>
         <bcpkix.version>1.84</bcpkix.version>
         <minestom.version>2026.06.05-26.1.2</minestom.version>
         <adventure-text-minimessage.version>5.2.0</adventure-text-minimessage.version>
@@ -51,94 +51,110 @@
         <hutool-crypto.version>5.8.38</hutool-crypto.version>
     </properties>
 
-    <dependencies>
-        <!-- Solon核心包 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-lib</artifactId>
-        </dependency>
-        <!-- Http 启动器 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-server-smarthttp</artifactId>
-        </dependency>
-        <!-- WebSocket 客户端 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>java-websocket-ns</artifactId>
-            <version>${java-websocket-client.version}</version>
-        </dependency>
-        <!-- Json序列化支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-serialization-jackson</artifactId>
-        </dependency>
-        <!-- 本地SessionSate支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-sessionstate-local</artifactId>
-        </dependency>
-        <!-- 静态文件支持插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-web-staticfiles</artifactId>
-        </dependency>
-        <!-- 跨域处理插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-web-cors</artifactId>
-        </dependency>
-        <!-- 参数与实体验证扩展插件 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-security-validation</artifactId>
-        </dependency>
-        <!-- 日志 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-logging-logback-jakarta</artifactId>
-        </dependency>
-        <!-- lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- banner打印 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-config-banner</artifactId>
-        </dependency>
-        <!-- 测试 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-test-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- mapstruct-plus对象拷贝 -->
-        <dependency>
-            <groupId>org.dromara.solon-plugins</groupId>
-            <artifactId>mapstruct-plus-solon-plugin</artifactId>
-        </dependency>
-        <!-- 多模块通信 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>dami2-solon-plugin</artifactId>
-            <version>${damibus.version}</version>
-        </dependency>
-        <!-- Sa-Token -->
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-solon-plugin</artifactId>
-            <version>${sa-token.version}</version>
-        </dependency>
-        <!-- mybatis-plus -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-solon-plugin</artifactId>
-            <version>${mybatis-plus.version}</version>
-        </dependency>
-    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-solon-plugin</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>${jsqlparser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${HikariCP.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${MySQL-Driver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>${SQLServer-Driver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.simplejavamail</groupId>
+                <artifactId>simple-java-mail</artifactId>
+                <version>${simple-java-mail}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-mail</artifactId>
+                <version>2.0.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bcpkix.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-crypto</artifactId>
+                <version>${hutool-crypto.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mineskin</groupId>
+                <artifactId>java-client</artifactId>
+                <version>3.2.6</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mineskin</groupId>
+                <artifactId>java-client-jsoup</artifactId>
+                <version>3.2.6</version>
+            </dependency>
+            <dependency>
+                <groupId>org.noear</groupId>
+                <artifactId>dami2-solon-plugin</artifactId>
+                <version>${damibus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-solon-plugin</artifactId>
+                <version>${sa-token.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.noear</groupId>
+                <artifactId>java-websocket-ns</artifactId>
+                <version>${java-websocket-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.13.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.21</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>2.2.224</version>
+            </dependency>
+            <dependency>
+                <groupId>net.minestom</groupId>
+                <artifactId>minestom</artifactId>
+                <version>${minestom.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.kyori</groupId>
+                <artifactId>adventure-text-minimessage</artifactId>
+                <version>${adventure-text-minimessage.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <profiles>
         <profile>
