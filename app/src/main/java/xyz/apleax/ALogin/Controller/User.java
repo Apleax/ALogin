@@ -16,7 +16,7 @@ import xyz.apleax.ALogin.Service.Remote.UserService;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
- * 用户Controller
+ * 用户管理
  *
  * @author Apleax
  */
@@ -30,7 +30,6 @@ public class User {
 
     @Mapping(path = "/GetUserInfo", method = MethodType.GET,
             name = "获取用户信息", description = "获取用户信息接口，用于获取用户信息")
-
     public Result<UserInfoVO> GetUserInfo() {
         return userService.getUserInfo();
     }

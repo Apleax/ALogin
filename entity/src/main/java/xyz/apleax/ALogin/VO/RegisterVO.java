@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.VO;
 
 import lombok.Data;
-import org.noear.solon.validation.annotation.Email;
 import org.noear.solon.validation.annotation.Length;
 import org.noear.solon.validation.annotation.NotBlank;
 
@@ -16,7 +15,6 @@ public class RegisterVO {
      * 邮箱
      */
     @NotBlank(message = "邮箱不能为空")
-    @Email(message = "邮箱格式错误")
     private String email;
     /**
      * 密码

@@ -30,7 +30,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) implements LifecycleBean {
-    private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，值为 '{}'，原因：{}";
+    private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，原因：{}";
 
     private static final String API_TEMPLATE = "https://www.badqin.top/luckperms/%s";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -39,7 +39,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
             .build();
 
     private static void onRemoval(Object key, Object value, RemovalCause cause) {
-        log.debug(CACHE_REMOVED_SIMPLE, key, value, cause);
+        log.debug(CACHE_REMOVED_SIMPLE, key, cause);
     }
 
     @Override
@@ -92,7 +92,8 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                         case EMAIL -> queryWrapper.eq(AccountPO::getEmail, Type.value());
                         case QQ_ACCOUNT -> queryWrapper.eq(AccountPO::getQqAccount, Type.value());
                         case UUID -> queryWrapper.eq(AccountPO::getMcUuid, UuidTypeHandler.parse(Type.value()));
-                        case PREMIUM_UUID -> queryWrapper.eq(AccountPO::getPremiumUuid, UuidTypeHandler.parse(Type.value()));
+                        case PREMIUM_UUID ->
+                                queryWrapper.eq(AccountPO::getPremiumUuid, UuidTypeHandler.parse(Type.value()));
                         case BEDROCK_XUID -> queryWrapper.eq(AccountPO::getBedrockXuid, Type.value());
                     }
                     AccountPO accountPO = accountService.getOne(queryWrapper);

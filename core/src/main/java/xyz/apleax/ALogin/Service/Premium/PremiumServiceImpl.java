@@ -197,19 +197,19 @@ public class PremiumServiceImpl implements LifecycleBean {
      * 绑定：把正版 UUID 写入账号（幂等；已被其他账号绑定则拒绝）
      */
     public Result<PremiumProfile> bind(String account, PremiumProfile profile) {
-        String boundAccount = accountIndexCache.get(
-                new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
+        AccountIndexCache key = new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString());
+        String boundAccount = accountIndexCache.get(key);
         if (boundAccount != null && !boundAccount.equals(account))
             return Result.failure("该正版账号已绑定到其他账号，如需更换请先解绑");
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return Result.failure("账号不存在");
         UUID previousUuid = accountPO.getPremiumUuid();
         if (profile.uuid().equals(previousUuid)) {
-            if (!Objects.equals(profile.name(), accountPO.getPremiumName())) {
+            if (!Objects.equals(profile.name(), accountPO.getPremiumName()))
                 if (updatePremiumName(account, profile.name()))
                     log.info("正版账号重复绑定（幂等），补写正版名称，account={}, name={}", account, profile.name());
                 else log.warn("正版账号重复绑定（幂等），正版名称补写失败，account={}", account);
-            } else log.info("正版账号重复绑定（幂等），account={}, premiumUuid={}", account, profile.uuid());
+            else log.info("正版账号重复绑定（幂等），account={}, premiumUuid={}", account, profile.uuid());
             return Result.succeed(profile);
         }
         boolean updated;
@@ -227,7 +227,7 @@ public class PremiumServiceImpl implements LifecycleBean {
             return Result.failure("绑定失败，请稍后再试");
         }
         accountCache.invalidate(account);
-        accountIndexCache.invalidate(new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
+        accountIndexCache.invalidate(key);
         if (previousUuid != null)
             accountIndexCache.invalidate(new AccountIndexCache(AccountType.PREMIUM_UUID, previousUuid.toString()));
         log.info("正版绑定成功，account={}, premiumUuid={}, previousPremiumUuid={}, name={}",

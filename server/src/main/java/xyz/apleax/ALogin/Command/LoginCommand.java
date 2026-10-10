@@ -6,11 +6,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.command.ArgumentParserType;
+import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.command.builder.arguments.ArgumentString;
-import net.minestom.server.command.builder.arguments.ArgumentType;
+import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.entity.Player;
+import net.minestom.server.network.NetworkBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.noear.dami2.Dami;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
@@ -47,7 +50,7 @@ import java.util.regex.Pattern;
 @Condition(onClass = MinecraftServer.class)
 public class LoginCommand extends Command implements LifecycleBean {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9_-]+@[A-Za-z0-9]+(\\.[A-Za-z0-9-]+)+$");
-    private static final long ATTEMPT_COOLDOWN_MILLIS = 3_000L;
+    private static final long ATTEMPT_COOLDOWN_MILLIS = 1_000L;
 
     private final TransferAddress transfer = TransferAddress.parse(Solon.cfg().get("minestom.transfer"));
     private final String cookieKey = Solon.cfg().get("minestom.cookie-key");
@@ -75,17 +78,19 @@ public class LoginCommand extends Command implements LifecycleBean {
         this.encryptor = encryptor;
         this.selector = selector;
 
-        setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
+        setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l <邮箱> <密码>"));
 
-        ArgumentString email = ArgumentType.String("'邮箱'");
-        ArgumentString password = ArgumentType.String("'密码'");
-
-        email.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
-        password.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
+        GreedyCredentials credentials = new GreedyCredentials("'邮箱' '密码'");
 
         addSyntax((sender, context) -> {
-            String emailStr = context.get(email);
-            String passwordStr = context.get(password);
+            String input = context.get(credentials);
+            int split = input.indexOf(' ');
+            if (split <= 0 || split == input.length() - 1) {
+                sender.sendMessage("用法: /l <邮箱> <密码>");
+                return;
+            }
+            String emailStr = input.substring(0, split);
+            String passwordStr = input.substring(split + 1);
             if (!isEmail(emailStr)) {
                 sender.sendMessage("邮箱格式错误");
                 return;
@@ -105,7 +110,7 @@ public class LoginCommand extends Command implements LifecycleBean {
                     player.sendMessage("登录失败，请稍后再试");
                 }
             });
-        }, email, password);
+        }, credentials);
     }
 
     @Override
@@ -155,10 +160,9 @@ public class LoginCommand extends Command implements LifecycleBean {
             else log.debug("最后登录 IP 无变化或更新失败，account={}", account);
             // 首次绑定：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）
             PremiumAssertion assertion = assertionService.get(player.getUuid());
-            if (assertion != null)
-                Dami.bus().send("PremiumBind", Map.of("account", account,
-                        "premiumUuid", assertion.uuid().toString(),
-                        "premiumName", assertion.name() == null ? "" : assertion.name()));
+            if (assertion != null) Dami.bus().send("PremiumBind", Map.of("account", account,
+                    "premiumUuid", assertion.uuid().toString(),
+                    "premiumName", assertion.name() == null ? "" : assertion.name()));
             String tokenValue = StpUtil.getTokenValueByLoginId(account);
             if (tokenValue == null) {
                 log.warn("登录指令处理失败：无法获取会话 token，account={}", account);
@@ -174,5 +178,27 @@ public class LoginCommand extends Command implements LifecycleBean {
 
     private boolean isEmail(String input) {
         return EMAIL_PATTERN.matcher(input).matches();
+    }
+
+    private static final class GreedyCredentials extends Argument<String> {
+
+        private GreedyCredentials(String id) {
+            super(id, true, true);
+        }
+
+        @Override
+        public @NonNull String parse(@NonNull CommandSender sender, @NonNull String input) {
+            return input;
+        }
+
+        @Override
+        public @NonNull ArgumentParserType parser() {
+            return ArgumentParserType.STRING;
+        }
+
+        @Override
+        public byte[] nodeProperties() {
+            return NetworkBuffer.makeArray(NetworkBuffer.VAR_INT, 2);
+        }
     }
 }

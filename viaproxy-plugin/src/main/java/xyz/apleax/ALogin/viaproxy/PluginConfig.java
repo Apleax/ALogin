@@ -118,17 +118,16 @@ public record PluginConfig(boolean enabled, String secret, String channel, Strin
         String value = properties.getProperty("alogin-url", "").trim();
         if (value.isEmpty()) return "";
         if (!value.startsWith("http://") && !value.startsWith("https://")) {
-            Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 格式非法 (应为 http://主机:端口, 当前为 '" + value
-                    + "'), 按未配置处理");
+            Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 格式非法 (应为 http://主机:端口, 当前为 '{}'), 按未配置处理", value);
             return "";
         }
         try {
             if (java.net.URI.create(value).getHost() == null) {
-                Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 缺少主机名 ('" + value + "'), 按未配置处理");
+                Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 缺少主机名 ('{}'), 按未配置处理", value);
                 return "";
             }
         } catch (IllegalArgumentException e) {
-            Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 格式非法 ('" + value + "'), 按未配置处理");
+            Logger.LOGGER.error("[ALoginPremium] 'alogin-url' 格式非法 ('{}'), 按未配置处理", value);
             return "";
         }
         return value;

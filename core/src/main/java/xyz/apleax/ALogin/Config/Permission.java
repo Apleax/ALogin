@@ -1,6 +1,7 @@
 package xyz.apleax.ALogin.Config;
 
 import cn.dev33.satoken.stp.StpInterface;
+import lombok.AllArgsConstructor;
 import xyz.apleax.ALogin.SQL.Service.Impl.IAccountServiceImpl;
 
 import java.util.List;
@@ -13,12 +14,9 @@ import java.util.List;
  */
 //@Managed
 //@Condition(onBean = IAccountServiceImpl.class)
+@AllArgsConstructor
 public class Permission implements StpInterface {
     private final IAccountServiceImpl accountService;
-
-    public Permission(IAccountServiceImpl accountService) {
-        this.accountService = accountService;
-    }
 
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {

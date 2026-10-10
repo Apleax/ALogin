@@ -35,6 +35,12 @@ solon.logging:
     console:
       level: INFO
       enable: true #是否启用
+    # 文件日志输出级别
+    file:
+      level: DEBUG
+      enable: true #是否启用
+      maxFileSize: "5 MB"
+      maxHistory: "30"
 
 sa-token:
   # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）

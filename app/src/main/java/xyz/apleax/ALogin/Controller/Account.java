@@ -29,9 +29,10 @@ import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.VO.*;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * 账号Controller
+ * 账号管理
  *
  * @author Apleax
  */
@@ -44,6 +45,8 @@ public class Account {
      * 缓存刷新特权账号（临时过渡，后续接入外部权限系统后替换）
      */
     private static final String CACHE_REFRESH_ACCOUNT = "81271059";
+
+    private static final Pattern EMAIL_REGEX = Pattern.compile("^[A-Za-z0-9_-]+@[A-Za-z0-9]+(\\.[A-Za-z0-9-]+)+$");
 
     private final AccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
@@ -73,10 +76,15 @@ public class Account {
     public Result<Long> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
         if (verifyCodeVO == null) return Result.failure("请求参数缺失");
         VerifyCodeKey verifyCodeKey = null;
-        if (verifyCodeVO instanceof RegisterVerifyCodeVO registerVerifyCodeVO)
+        if (verifyCodeVO instanceof RegisterVerifyCodeVO registerVerifyCodeVO) {
+            if (!EMAIL_REGEX.matcher(registerVerifyCodeVO.getEmail()).matches()) return Result.failure("邮箱格式错误");
             verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), VerifyCodeType.REGISTER);
-        if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO)
+        }
+        if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO) {
+            if (!EMAIL_REGEX.matcher(resetPasswordVerifyCodeVO.getEmail()).matches())
+                return Result.failure("邮箱格式错误");
             verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), VerifyCodeType.RESET_PASSWORD);
+        }
         if (verifyCodeKey == null) return Result.failure("请求参数缺失");
         return accountService.verifyCode(verifyCodeKey);
     }
@@ -100,6 +108,7 @@ public class Account {
     private Result<SaTokenInfo> doLogin(LoginVO loginVO, String token) {
         LoginBO loginBO = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
+            if (!EMAIL_REGEX.matcher(loginByEmailVO.getEmail()).matches()) return Result.failure("邮箱格式错误");
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
             loginBO.setAccount_type(AccountType.EMAIL);
         }
