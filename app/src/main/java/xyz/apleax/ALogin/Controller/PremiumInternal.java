@@ -8,6 +8,7 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.MethodType;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.validation.annotation.Valid;
+import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 import xyz.apleax.ALogin.Service.Remote.PremiumService;
 
 /**
@@ -23,7 +24,7 @@ public class PremiumInternal {
     /**
      * 代理插件查询名单时携带的请求头名（值 = Premium.assertion.secret）
      */
-    private static final String KEY_HEADER = "X-ALogin-Key";
+    private static final String KEY_HEADER = PremiumAssertionService.KEY_HEADER;
 
     private final PremiumService premiumService;
 

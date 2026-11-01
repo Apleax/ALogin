@@ -91,6 +91,17 @@ Security:
     # 加密算法: SHA256, SHA512, Argon2（新注册账号使用；存量账号按各自记录中的算法验证）
     algorithm: Argon2
 
+# 玩家头像兜底配置（接口 GET /api/web/user/Avatar）
+# 头像本身由 skin 表的玩家皮肤现场渲染，这里只决定"取不到皮肤时返回什么"
+Avatar:
+  # 默认头像来源：http(s) URL，或相对 ALogin/ 的文件路径（如 icons/avatar-default.png）
+  # 留空或加载失败时返回代码内置的占位头像
+  default-source: ""
+  # 远程默认头像的下载超时（毫秒），可选
+  fetch-timeout-ms: 3000
+  # 头像响应的浏览器缓存秒数，可选
+  cache-seconds: 600
+
 # 正版（微软设备码授权 + 免密断言）配置块
 # 设备码授权借用 Minecraft 启动器官方凭据，无需 Azure 应用注册，因此没有 oauth 配置项
 Premium:

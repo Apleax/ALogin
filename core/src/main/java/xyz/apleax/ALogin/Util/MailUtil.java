@@ -15,6 +15,7 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,6 +32,7 @@ public final class MailUtil {
     private static final String TPL_VERIFY_CODE = "email/RegVerifyCode.html";
     private static final String TPL_PASSWORD_RESET_NOTIFY = "email/PasswordResetNotify.html";
     private static final String TPL_SKIN_UPLOAD_FAILED = "email/SkinUploadFailed.html";
+    private static final String TPL_PERMISSION_CHANGE_NOTIFY = "email/PermissionChangeNotify.html";
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -102,6 +104,39 @@ public final class MailUtil {
                 "<reason/>", reason,
                 "<time/>", LocalDateTime.now().format(DATETIME_FMT)
         ));
+    }
+
+    /**
+     * 异步发送 LuckPerms 权限变更通知邮件（高敏操作，批量发送给预配置的收件人列表）。
+     *
+     * @param toEmails 收件人邮箱列表（为空或全为空白则跳过）
+     * @param operator 操作者账号
+     * @param target   被修改权限的目标账号（或 mcUuid）
+     * @param summary  本次批量变更的可读摘要，多行文本
+     */
+    public static void sendPermissionChangeNotifyAsync(List<String> toEmails, String operator, String target, String summary) {
+        if (toEmails == null || toEmails.isEmpty()) {
+            log.debug("收件人列表为空，跳过权限变更通知");
+            return;
+        }
+        String subject = "[" + serverName + "] LuckPerms 权限变更通知";
+        Map<String, String> placeholders = Map.of(
+                "<operator/>", safe(operator),
+                "<target/>", safe(target),
+                "<summary/>", safe(summary),
+                "<time/>", LocalDateTime.now().format(DATETIME_FMT)
+        );
+        try {
+            for (String toEmail : toEmails) {
+                if (toEmail == null || toEmail.isBlank()) {
+                    log.debug("收件人为空，跳过权限变更通知");
+                    continue;
+                }
+                sendTemplateAsync(toEmail, subject, TPL_PERMISSION_CHANGE_NOTIFY, placeholders);
+            }
+        } catch (Exception e) {
+            log.warn("权限变更通知邮件提交异常，主题: {}，原因: {}", subject, e.getMessage());
+        }
     }
 
 

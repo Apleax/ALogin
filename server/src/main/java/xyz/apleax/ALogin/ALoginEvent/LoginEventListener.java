@@ -1,6 +1,5 @@
 package xyz.apleax.ALogin.ALoginEvent;
 
-import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.temp.SaTempUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.minestom.server.MinecraftServer;
@@ -48,15 +47,19 @@ public class LoginEventListener implements EventListener<Map<String, String>> {
         if (player == null) return;
         String account = map.get("account");
         if (account == null) return;
-        // 首次绑定：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）
+        // 首次绑定兜底：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）。
+        // 正版自动登录（premiumBound=true）的账号本来就是按 premium_uuid 查出来的，
+        // 绑定关系已成立、名字也已同步，再走一次只会得到"重复绑定（幂等）"，直接跳过
         PremiumAssertion assertion = assertionService.get(player.getUuid());
-        if (assertion != null)
+        if (assertion != null && !"true".equals(map.get("premiumBound")))
             Dami.bus().send("PremiumBind", Map.of("account", account,
                     "premiumUuid", assertion.uuid().toString(),
                     "premiumName", assertion.name() == null ? "" : assertion.name()));
-        String tokenValue = StpUtil.getTokenValueByLoginId(account);
-        if (tokenValue == null) {
-            log.warn("登录放行失败：无法获取会话 token，account={}", account);
+        String tokenValue = map.get("sessionToken");
+        if (tokenValue == null || tokenValue.isBlank()) {
+            log.warn("登录放行失败：事件缺少 sessionToken，account={}", account);
+            // 放行不可能发生，临时 token 没有保留价值；不删会留下最长 5 分钟的可重放凭证
+            SaTempUtil.deleteToken(map.get("token"));
             return;
         }
         player.getPlayerConnection().storeCookie(cookieKey + ":token", tokenValue.getBytes(StandardCharsets.UTF_8));

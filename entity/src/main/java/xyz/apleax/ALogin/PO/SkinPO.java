@@ -42,4 +42,10 @@ public class SkinPO {
      */
     @TableField(typeHandler = BlobTypeHandler.class)
     private byte[] skinImg;
+    /**
+     * 头像贴图缓存：16×8 PNG（左 8×8 头部正面 + 右 8×8 帽子层正面），由 {@link #skinImg} 生成；
+     * 为空时读路径现场生成（见 AvatarRenderer）
+     */
+    @TableField(typeHandler = BlobTypeHandler.class)
+    private byte[] avatar;
 }

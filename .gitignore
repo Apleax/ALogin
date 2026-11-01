@@ -28,6 +28,7 @@ nbdist/
 ### Mac files ###
 *.DS_Store
 /app/src/main/resources/ALogin/config-dev.yml
+/app/src/main/resources/ALogin/permission-dev.yml
 
 ### 运行期产物（jar 同目录生成，含真实配置/日志/数据库） ###
 /ALogin/

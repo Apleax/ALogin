@@ -51,7 +51,7 @@ public class VerifyCodeServiceImpl {
             String accountId = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, verifyCodeKey.email()));
             AccountPO accountPO = null;
             if (accountId != null) accountPO = accountCache.get(accountId);
-            if (accountPO == null) return Result.succeed();
+            if (accountPO == null) return Result.failure("该邮箱未注册");
         }
         VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(verifyCodeKey);
         synchronized (verifyCodePOJO) {

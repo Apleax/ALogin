@@ -7,6 +7,7 @@ import org.noear.solon.annotation.Init;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import xyz.apleax.ALogin.POJO.PremiumAssertion;
+import xyz.apleax.ALogin.Util.ClientIp;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import javax.crypto.Mac;
@@ -26,6 +27,11 @@ import java.util.regex.Pattern;
 @Slf4j
 @Managed
 public class PremiumAssertionService {
+    /**
+     * 内部接口共享密钥的请求头名：ViaProxy 插件（拉名单）与 Geyser 扩展（免密/绑定）都用它，
+     * 所有服务端读取方也统一引用本常量，改头名只需改这一处
+     */
+    public static final String KEY_HEADER = "X-ALogin-Key";
     private static final String VERSION_TAG = "ALOGIN1";
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final int MAX_PAYLOAD_LENGTH = 512;
@@ -169,14 +175,8 @@ public class PremiumAssertionService {
             log.warn("正版断言挑战重复使用，拒绝重放");
             return null;
         }
-        String realIp = normalizeIp(ip);
-        log.info("正版断言校验通过：uuid={}, name={}, ip={}", uuid, name, realIp);
+        String realIp = ClientIp.normalize(ip);
+        log.debug("正版断言校验通过：uuid={}, name={}, ip={}", uuid, name, realIp);
         return new PremiumAssertion(uuid, name, realIp, timestamp);
-    }
-
-    private static String normalizeIp(String ip) {
-        if (ip == null || ip.isBlank() || ip.length() > 45 || ip.indexOf('/') >= 0
-                || ip.chars().anyMatch(Character::isWhitespace)) return null;
-        return ip;
     }
 }

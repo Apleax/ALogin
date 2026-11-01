@@ -139,14 +139,26 @@ public class ALoginTransferExtension implements Extension {
      * 交接路径（/l 登录）补绑一次 XUID
      */
     private void maybeBindXuid(GeyserConnection connection, Settings current, String xuid, Map<String, byte[]> cookies) {
-        if (!current.xuidAutologin() || xuid.isBlank() || current.aloginUrl().isBlank()) return;
         byte[] tokenBytes = cookies.get(current.cookieKey() + ":token");
         if (tokenBytes == null) return;
-        String token = new String(tokenBytes, StandardCharsets.UTF_8);
-        if (token.isBlank()) return;
-        String name = connection.bedrockUsername();
-        BIND_EXECUTOR.submit(() -> new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
-                .bindXuid(token, xuid, name));
+        bindXuidAsync(current, new String(tokenBytes, StandardCharsets.UTF_8), xuid, connection.bedrockUsername());
+    }
+
+    /**
+     * 异步补绑 XUID：两条入口（表单登录、/l 交接）共用，失败只记日志、不阻断交接。
+     * 走共享守护线程池而不是在 Geyser 事件线程上直接调用——ALogin 的一次调用最长要等 3s 连接 + 5s 响应，
+     * 同步调用会把其它玩家的事件一起堵住
+     */
+    private void bindXuidAsync(Settings current, String token, String xuid, String name) {
+        if (!current.xuidAutologin() || xuid == null || xuid.isBlank()
+                || token == null || token.isBlank() || current.aloginUrl().isBlank()) return;
+        BIND_EXECUTOR.submit(() -> {
+            try {
+                new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger()).bindXuid(token, xuid, name);
+            } catch (RuntimeException e) {
+                logger().warning("XUID 绑定调用异常(" + name + "): " + e.getMessage());
+            }
+        });
     }
 
     /**
@@ -207,14 +219,8 @@ public class ALoginTransferExtension implements Extension {
             openLoginForm(connection, current, trimmedEmail, result.message());
             return;
         }
-        if (current.xuidAutologin() && !connection.xuid().isBlank()) {
-            try {
-                new ALoginClient(current.aloginUrl(), current.aloginHeader(), logger())
-                        .bindXuid(result.token(), connection.xuid(), connection.bedrockUsername());
-            } catch (RuntimeException e) {
-                logger().warning("XUID 绑定调用异常(" + connection.bedrockUsername() + "): " + e.getMessage());
-            }
-        }
+        // 与 /l 交接路径一致：补绑走后台线程，不让一次 HTTP 往返卡住 Geyser 事件线程
+        bindXuidAsync(current, result.token(), connection.xuid(), connection.bedrockUsername());
         Map<String, byte[]> cookies = Map.of(current.cookieKey() + ":token",
                 result.token().getBytes(StandardCharsets.UTF_8));
         remember(connection.xuid(), new PendingTransfer(cookies, target.host(), target.port(),

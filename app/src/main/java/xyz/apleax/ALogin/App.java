@@ -3,11 +3,8 @@ package xyz.apleax.ALogin;
 
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.fusesource.jansi.AnsiConsole;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.SolonMain;
-import org.noear.solon.core.util.ClassUtil;
-import org.noear.solon.core.util.JavaUtil;
 import org.noear.solon.core.util.ResourceUtil;
 import org.noear.solon.web.cors.CrossFilter;
 
@@ -26,12 +23,6 @@ public class App {
      */
     static void main(String[] args) {
         Solon.start(App.class, args, app -> {
-            if (JavaUtil.IS_WINDOWS && !Solon.cfg().isFilesMode())
-                if (ClassUtil.hasClass(() -> AnsiConsole.class)) try {
-                    AnsiConsole.systemInstall();
-                } catch (Throwable e) {
-                    log.warn("Failed to initialize AnsiConsole");
-                }
             Security.addProvider(new BouncyCastleProvider());
 
             String appName = Solon.cfg().appName();
@@ -53,16 +44,25 @@ public class App {
                 Solon.stop();
                 return;
             }
+
+            String permissionFileName = isDev ? "permission-dev.yml" : "permission.yml";
+            URL permissionPath = ResourceUtil.getResourceByFile("./" + appName + "/" + permissionFileName);
+            if (permissionPath == null && isDev)
+                permissionPath = ResourceUtil.getResource(appName + "/" + permissionFileName);
+            if (permissionPath == null) {
+                log.warn("Permission config not found: ./{}/{}", appName, permissionFileName);
+                Solon.stop();
+                return;
+            }
             Solon.cfg().loadAdd(configPath);
+            Solon.cfg().loadAdd(permissionPath);
 
             String cross = Solon.cfg().get("cross.allow-origin", "*");
-            if (cross == null || cross.isBlank() || "*".equals(cross)) {
+            if (cross == null || cross.isBlank() || "*".equals(cross))
                 app.router().filter(-1, new CrossFilter().allowedOrigins("*"));
-            } else {
-                app.router().filter(-1, new CrossFilter()
-                        .allowedOrigins(cross)
-                        .allowCredentials(true));
-            }
+            else app.router().filter(-1, new CrossFilter()
+                    .allowedOrigins(cross)
+                    .allowCredentials(true));
             log.info("ALogin Version: {}", Solon.cfg().get("solon.app.version"));
         });
     }

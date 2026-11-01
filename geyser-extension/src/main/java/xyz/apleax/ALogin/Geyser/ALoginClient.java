@@ -40,7 +40,7 @@ final class ALoginClient {
      * 用邮箱密码登录, 返回的 token 供进服 cookie 使用
      */
     Result login(String email, String password) {
-        return login("/api/web/account/Login/", GSON.toJson(Map.of(
+        return login("/api/web/account/Login", GSON.toJson(Map.of(
                 "type", "Email",
                 "email", email,
                 "password", password)), "登录");

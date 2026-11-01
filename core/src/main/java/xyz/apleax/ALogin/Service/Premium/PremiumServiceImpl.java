@@ -18,19 +18,18 @@ import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
 import xyz.apleax.ALogin.POJO.PremiumFlowStatus;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Util.ClientIp;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -44,7 +43,6 @@ import java.util.stream.Collectors;
 @Managed
 @DamiTopic("premium")
 public class PremiumServiceImpl implements LifecycleBean {
-    private static final long AUTO_LOGIN_TOKEN_TTL_SECONDS = 60;
     /**
      * 设备码授权流程状态（过期自动清理）
      */
@@ -105,6 +103,9 @@ public class PremiumServiceImpl implements LifecycleBean {
                 .select(AccountPO::getPremiumUuid)
                 .isNotNull(AccountPO::getPremiumUuid));
         String joined = accounts.stream()
+                // 元素级过滤必须放在 map 之前：premium_uuid 为空串/非法值的行会被 MyBatis 映射成
+                // null 元素（历史上正是这个 NPE 让插件拉不到名单），先滤元素再取字段
+                .filter(Objects::nonNull)
                 .map(AccountPO::getPremiumUuid)
                 .filter(Objects::nonNull)
                 .map(UUID::toString)
@@ -146,6 +147,7 @@ public class PremiumServiceImpl implements LifecycleBean {
                 deviceCode.verificationUri(), deviceCode.expiresInSeconds()));
     }
 
+    @SuppressWarnings("BusyWait")
     private void pollUntilDone(Flow flow, PremiumOAuthService.DeviceCode deviceCode) {
         long deadline = System.currentTimeMillis() + deviceCode.expiresInSeconds() * 1000L;
         long intervalMillis = deviceCode.intervalSeconds() * 1000L;
@@ -163,10 +165,13 @@ public class PremiumServiceImpl implements LifecycleBean {
                     return;
                 }
             }
+            long waitMillis = Math.max(intervalMillis, 1_000L);
             try {
-                Thread.sleep(intervalMillis);
+                Thread.sleep(waitMillis);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                // 轮询被中断（应用关闭等）：流程不能停在 pending，否则前端会一直轮询到 20 分钟后才报"会话不存在"
+                if (PremiumFlowStatus.PENDING.equals(flow.status)) flow.fail("授权已取消，请重新发起");
                 return;
             }
         }
@@ -207,17 +212,20 @@ public class PremiumServiceImpl implements LifecycleBean {
         if (profile.uuid().equals(previousUuid)) {
             if (!Objects.equals(profile.name(), accountPO.getPremiumName()))
                 if (updatePremiumName(account, profile.name()))
-                    log.info("正版账号重复绑定（幂等），补写正版名称，account={}, name={}", account, profile.name());
+                    log.debug("正版账号重复绑定（幂等），补写正版名称，account={}, name={}", account, profile.name());
                 else log.warn("正版账号重复绑定（幂等），正版名称补写失败，account={}", account);
             else log.info("正版账号重复绑定（幂等），account={}, premiumUuid={}", account, profile.uuid());
             return Result.succeed(profile);
         }
         boolean updated;
         try {
-            updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+            LambdaUpdateWrapper<AccountPO> update = new LambdaUpdateWrapper<AccountPO>()
                     .set(AccountPO::getPremiumUuid, profile.uuid())
-                    .set(AccountPO::getPremiumName, profile.name())
-                    .eq(AccountPO::getAccount, account));
+                    .eq(AccountPO::getAccount, account);
+            // 名称只用于展示：本次拿不到名字时保留库中旧值，不能用空串覆盖（与 updatePremiumName 同款判据）
+            if (profile.name() != null && !profile.name().isBlank())
+                update.set(AccountPO::getPremiumName, profile.name());
+            updated = accountService.update(update);
         } catch (RuntimeException e) {
             log.error("绑定正版 UUID 异常，account={}, premiumUuid={}", account, profile.uuid(), e);
             return Result.failure("绑定失败，请稍后再试或联系管理员");
@@ -256,9 +264,7 @@ public class PremiumServiceImpl implements LifecycleBean {
      * 一键登录：按正版 UUID 找到账号并通知登录服放行
      */
     private Result<PremiumProfile> login(String token, PremiumProfile profile, String realIp) {
-        if (realIp == null || realIp.isBlank() || realIp.length() > 45 || realIp.indexOf('/') >= 0
-                || realIp.chars().anyMatch(Character::isWhitespace))
-            return Result.failure("无法获取客户端 IP，请稍后再试");
+        if (!ClientIp.isValid(realIp)) return Result.failure("无法获取客户端 IP，请稍后再试");
         String account = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
         if (account == null) return Result.failure("该正版账号尚未绑定 ALogin 账号，请先在网页登录后绑定");
@@ -269,8 +275,15 @@ public class PremiumServiceImpl implements LifecycleBean {
 
     /**
      * 自动登录：由 PremiumAutoLoginListener 调用，dami 线程置登录态需 mock 上下文
+     *
+     * @param token 本次进服会话的临时 token（登录服 spawn 阶段已生成，LoginEvent 靠它定位玩家）。
+     *              复用同一个而不是新建一个：一次进服只留一个可重放凭证，且与网页兜底链接同源
      */
-    public Result<PremiumProfile> autoLogin(String account, UUID playerUuid, PremiumProfile profile, String realIp) {
+    public Result<PremiumProfile> autoLogin(String account, String token, PremiumProfile profile, String realIp) {
+        if (token == null || token.isBlank()) {
+            log.warn("正版自动登录被拒：缺少进服临时 token，account={}", account);
+            return Result.failure("登录凭证缺失，请重新进入服务器");
+        }
         String boundAccount = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
         if (account == null || !account.equals(boundAccount)) {
@@ -279,7 +292,6 @@ public class PremiumServiceImpl implements LifecycleBean {
         }
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return Result.failure("账号不存在");
-        String token = SaTempUtil.createToken(playerUuid, AUTO_LOGIN_TOKEN_TTL_SECONDS, true);
         log.info("正版自动登录，account={}, premiumUuid={}, name={}, ip={}",
                 account, profile.uuid(), profile.name(), realIp);
         return completeLogin(account, accountPO, realIp, token, profile);
@@ -296,7 +308,7 @@ public class PremiumServiceImpl implements LifecycleBean {
             if (!Objects.equals(profile.name(), accountPO.getPremiumName())
                     && updatePremiumName(account, profile.name()))
                 log.info("正版名称变更已同步，account={}, premiumName={}", account, profile.name());
-            if (realIp != null && !realIp.isBlank()) {
+            if (ClientIp.isValid(realIp)) {
                 boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
                         .set(AccountPO::getLastLoginIp, realIp)
                         .eq(AccountPO::getAccount, account));
@@ -306,13 +318,28 @@ public class PremiumServiceImpl implements LifecycleBean {
                 }
                 accountCache.invalidate(account);
             }
-            StpUtil.login(account, AccountType.PREMIUM_UUID.getKey());
-            Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
+            StpUtil.login(account, LoginDevice.GAME.getKey());
+            StpUtil.getTokenSession().set("loginMethod", AccountType.PREMIUM_UUID.getKey());
+            Dami.bus().send("LoginEvent", loginEventPayload(account, token, StpUtil.getTokenValue()));
             log.info("正版登录成功，account={}, premiumUuid={}, name={}", account, profile.uuid(), profile.name());
             return Result.succeed(profile);
         } finally {
             SaTokenContextMockUtil.clearContext();
         }
+    }
+
+    /**
+     * LoginEvent 载荷：sessionToken 必须是本次登录刚生成的 token，下游不得按 account 反查"最后一个 token"
+     */
+    private Map<String, String> loginEventPayload(String account, String token, String sessionToken) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("account", account);
+        if (token != null) payload.put("token", token);
+        if (sessionToken != null && !sessionToken.isBlank()) payload.put("sessionToken", sessionToken);
+        // 本次登录的账号↔正版绑定已经生效（账号就是按 premium_uuid 查出来的），
+        // 明确告知下游不必再走 PremiumBind 兜底，省掉一次必然幂等的绑定写入
+        payload.put("premiumBound", "true");
+        return payload;
     }
 
     /**

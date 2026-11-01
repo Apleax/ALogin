@@ -13,6 +13,16 @@
     <artifactId>ALogin-app</artifactId>
 
     <dependencies>
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-logging-logback</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.fusesource.jansi</groupId>
+                    <artifactId>jansi</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- ALogin引入核心包 -->
         <dependency>
             <groupId>xyz.apleax</groupId>
@@ -63,11 +73,6 @@
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>solon-security-validation</artifactId>
-        </dependency>
-        <!-- 日志 -->
-        <dependency>
-            <groupId>org.noear</groupId>
-            <artifactId>solon-logging-logback-jakarta</artifactId>
         </dependency>
         <!-- banner打印 -->
         <dependency>

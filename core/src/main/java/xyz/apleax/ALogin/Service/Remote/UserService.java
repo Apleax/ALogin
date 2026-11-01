@@ -34,6 +34,16 @@ public interface UserService {
     Result<Boolean> changeNickName(String nickname);
 
     /**
+     * 渲染玩家头像（头部正面，可选叠加帽子层）
+     *
+     * @param uuid    服务器内 mcUuid（36 位带横线或 32 位无横线）
+     * @param size    输出边长，越界裁剪到 1-512
+     * @param overlay 是否叠加帽子层
+     * @return PNG 字节；查不到皮肤或皮肤不可用时返回服务端配置的默认头像，永不返回 {@code null}
+     */
+    byte[] avatar(String uuid, int size, boolean overlay);
+
+    /**
      * 返回玩家档案
      *
      * @param token    Token

@@ -21,11 +21,14 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
+import xyz.apleax.ALogin.Config.PermissionProperties;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.PremiumAssertion;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Service.Permission.PermissionService;
 import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 import xyz.apleax.ALogin.Util.Encrypt.EncryptorSelector;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
@@ -69,7 +72,8 @@ public class LoginCommand extends Command implements LifecycleBean {
                         @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
                         @Inject("Algorithm") PasswordEncryptor encryptor,
                         EncryptorSelector selector,
-                        PremiumAssertionService assertionService) {
+                        PremiumAssertionService assertionService,
+                        PermissionService permissionService) {
         super("login", "l");
         this.assertionService = assertionService;
         this.accountService = accountService;
@@ -104,6 +108,27 @@ public class LoginCommand extends Command implements LifecycleBean {
             }
             loginExecutor.submit(() -> {
                 try {
+                    // 权限鉴定会走 HTTP，必须在虚拟线程内执行；未配置权限（返回 null）时保持原有行为
+                    try {
+                        // 同一指令可能命中多条规则，全部生效（逻辑与）；group 即 LuckPerms 权限组
+                        for (PermissionProperties.Command.Rule rule : permissionService.matchCommandRules(getNames())) {
+                            if (rule.permission() != null && !rule.permission().isBlank()
+                                    && !permissionService.hasPermission(player.getUuid(), rule.permission())) {
+                                player.sendMessage("你没有权限执行该指令");
+                                return;
+                            }
+                            if (rule.group() != null && !rule.group().isBlank()
+                                    && !permissionService.hasGroup(player.getUuid(), rule.group())) {
+                                player.sendMessage("你没有权限执行该指令");
+                                return;
+                            }
+                        }
+                    } catch (Exception e) {
+                        // 鉴定异常按无权限处理，与 PermissionService 的 fail-closed 策略保持一致
+                        log.warn("指令权限鉴定异常，player={}，指令={}: {}", player.getUuid(), getName(), e.getMessage());
+                        player.sendMessage("你没有权限执行该指令");
+                        return;
+                    }
                     doLogin(player, emailStr, passwordStr);
                 } catch (Exception e) {
                     log.warn("登录指令处理异常，player={}: {}", player.getUuid(), e.getMessage());
@@ -149,7 +174,8 @@ public class LoginCommand extends Command implements LifecycleBean {
         }
         SaTokenContextMockUtil.setMockContext();
         try {
-            StpUtil.login(account, AccountType.EMAIL.getKey());
+            StpUtil.login(account, LoginDevice.GAME.getKey());
+            StpUtil.getTokenSession().set("loginMethod", AccountType.EMAIL.getKey());
             // 只取纯 IP, InetSocketAddress#toString 会带 "/" 和端口
             String realIp = ((InetSocketAddress) player.getPlayerConnection().getRemoteAddress())
                     .getHostString();
@@ -163,8 +189,9 @@ public class LoginCommand extends Command implements LifecycleBean {
             if (assertion != null) Dami.bus().send("PremiumBind", Map.of("account", account,
                     "premiumUuid", assertion.uuid().toString(),
                     "premiumName", assertion.name() == null ? "" : assertion.name()));
-            String tokenValue = StpUtil.getTokenValueByLoginId(account);
-            if (tokenValue == null) {
+            // 取本次刚生成的 token（按 account 反查"最后一个 token"在多端并存时会取到别的端）
+            String tokenValue = StpUtil.getTokenValue();
+            if (tokenValue == null || tokenValue.isBlank()) {
                 log.warn("登录指令处理失败：无法获取会话 token，account={}", account);
                 player.sendMessage("登录失败，请稍后再试");
                 return;

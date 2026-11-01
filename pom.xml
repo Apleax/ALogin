@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.noear</groupId>
         <artifactId>solon-parent</artifactId>
-        <version>4.1.0</version>
+        <version>4.1.1</version>
         <relativePath/>
     </parent>
 
@@ -34,25 +34,31 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <jline.version>4.4.8</jline.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <jsqlparser.version>3.5.17</jsqlparser.version>
         <HikariCP.version>7.1.0</HikariCP.version>
-        <MySQL-Driver.version>9.3.0</MySQL-Driver.version>
+        <MySQL-Driver.version>26.7.0</MySQL-Driver.version>
         <SQLServer-Driver.version>13.2.1.jre11</SQLServer-Driver.version>
         <simple-java-mail>9.3.5</simple-java-mail>
         <sa-token.version>1.46.0</sa-token.version>
-        <mapstruct-plus.version>1.4.8</mapstruct-plus.version>
-        <caffeine.version>3.3.0</caffeine.version>
-        <bcpkix.version>1.84</bcpkix.version>
-        <minestom.version>2026.06.05-26.1.2</minestom.version>
+        <mapstruct-plus.version>1.5.2</mapstruct-plus.version>
+        <caffeine.version>3.3.1</caffeine.version>
+        <bcpkix.version>1.86</bcpkix.version>
+        <minestom.version>2026.10.07-26.2</minestom.version>
         <adventure-text-minimessage.version>5.2.0</adventure-text-minimessage.version>
-        <damibus.version>2.0.4</damibus.version>
-        <java-websocket-client.version>1.1</java-websocket-client.version>
-        <hutool-crypto.version>5.8.38</hutool-crypto.version>
+        <damibus.version>2.0.5</damibus.version>
+        <java-websocket-client.version>1.2</java-websocket-client.version>
+        <hutool-crypto.version>5.8.48</hutool-crypto.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+                <version>${jline.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-solon-plugin</artifactId>
@@ -84,11 +90,6 @@
                 <version>${simple-java-mail}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.angus</groupId>
-                <artifactId>angus-mail</artifactId>
-                <version>2.0.4</version>
-            </dependency>
-            <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
@@ -106,12 +107,12 @@
             <dependency>
                 <groupId>org.mineskin</groupId>
                 <artifactId>java-client</artifactId>
-                <version>3.2.6</version>
+                <version>3.2.7</version>
             </dependency>
             <dependency>
                 <groupId>org.mineskin</groupId>
                 <artifactId>java-client-jsoup</artifactId>
-                <version>3.2.6</version>
+                <version>3.2.7</version>
             </dependency>
             <dependency>
                 <groupId>org.noear</groupId>
@@ -131,12 +132,12 @@
             <dependency>
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>
-                <version>2.13.2</version>
+                <version>2.15.0</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.21</version>
+                <version>2.22</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -172,6 +173,7 @@
                         </includes>
                         <excludes>
                             <exclude>ALogin/config-dev.yml</exclude>
+                            <exclude>ALogin/permission-dev.yml</exclude>
                         </excludes>
                     </resource>
                     <resource>
@@ -196,6 +198,7 @@
                         </includes>
                         <excludes>
                             <exclude>ALogin/config.yml</exclude>
+                            <exclude>ALogin/permission.yml</exclude>
                         </excludes>
                     </resource>
                     <resource>

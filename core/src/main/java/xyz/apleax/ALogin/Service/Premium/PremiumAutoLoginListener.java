@@ -30,12 +30,12 @@ public class PremiumAutoLoginListener implements EventListener<Map<String, Strin
         Map<String, String> map = event.getPayload();
         try {
             premiumService.autoLogin(map.get("account"),
-                    UUID.fromString(map.get("playerUuid")),
+                    map.get("token"),
                     new PremiumProfile(UUID.fromString(map.get("premiumUuid")),
                             map.getOrDefault("premiumName", "")),
                     emptyToNull(map.get("ip")));
         } catch (Exception e) {
-            log.warn("正版自动登录处理失败：{}", e.getMessage());
+            log.warn("正版自动登录处理失败", e);
         }
     }
 

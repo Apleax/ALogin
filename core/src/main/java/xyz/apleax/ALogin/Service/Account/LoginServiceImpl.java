@@ -15,12 +15,15 @@ import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Util.ClientIp;
 import xyz.apleax.ALogin.Util.Encrypt.EncryptorSelector;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -54,7 +57,11 @@ public class LoginServiceImpl {
     }
 
     /**
-     * 登录；免密快捷路径仅在会话归属该账号时生效（防止同 IP 下借他人会话冒充登录）
+     * 登录；免密快捷路径仅在"会话归属该账号 + 同 IP + 同设备"时生效（防止同 IP 下借他人会话冒充登录，
+     * 也避免把网页会话的 token 当作进服凭证复用）。
+     * <p>
+     * device 是 Sa-Token 的设备（终端）维度，不是登录凭证类型：{@code is-concurrent=false} 时只顶掉同 device
+     * 的旧会话。登录方式（email/account/...）写入 Token-Session 的 loginMethod，仅作审计。
      */
     @Transaction
     public Result<SaTokenInfo> login(LoginBO loginBO, String token) {
@@ -65,12 +72,11 @@ public class LoginServiceImpl {
             log.debug("拒绝 UUID 登录尝试，realIp={}", loginBO.getReal_ip());
             return Result.failure("暂不支持该登录方式");
         }
+        LoginDevice device = loginBO.getDevice() == null ? LoginDevice.WEB : loginBO.getDevice();
         String rawPassword = loginBO.getPassword();
         if (rawPassword == null || rawPassword.isEmpty()) return Result.failure("密码不能为空");
         String realIp = loginBO.getReal_ip();
-        if (realIp == null || realIp.isBlank()
-                || realIp.length() > 45 || realIp.indexOf('/') >= 0
-                || realIp.chars().anyMatch(Character::isWhitespace)) {
+        if (!ClientIp.isValid(realIp)) {
             log.warn("登录请求携带缺失或非法的 real_ip，已拒绝，len={}", realIp == null ? 0 : realIp.length());
             return Result.failure("无法获取客户端 IP，请稍后再试");
         }
@@ -86,16 +92,22 @@ public class LoginServiceImpl {
         String currentLoginId = StpUtil.isLogin() ? StpUtil.getLoginIdAsString() : null;
         if (account.equals(currentLoginId)) {
             String storedIp = accountPO.getLastLoginIp();
-            if (storedIp != null && storedIp.equals(realIp)) {
+            if (storedIp != null && storedIp.equals(realIp) && device.getKey().equals(StpUtil.getLoginDeviceType())) {
                 StpUtil.updateLastActiveToNow();
                 SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-                dispatchLoginEvent(account, token);
-                log.info("登录成功，email={}, mcUuid={}, loginType=自动登录", accountPO.getEmail(), accountPO.getMcUuid());
+                dispatchLoginEvent(account, token, tokenInfo.getTokenValue());
+                log.info("登录成功，email={}, mcUuid={}, loginMethod={}, device={}（复用当前会话）",
+                        accountPO.getEmail(), accountPO.getMcUuid(), accountType.getKey(), device.getKey());
                 return Result.succeed(tokenInfo);
             }
-            log.warn("检测到异地登录，废弃当前 token，account={}, oldIp={}, newIp={}",
-                    account, storedIp, realIp);
-            StpUtil.logout();
+            if (storedIp != null && storedIp.equals(realIp)) {
+                log.info("当前会话 device={} 与本次登录 device={} 不一致，为 {} 端新建会话，account={}",
+                        StpUtil.getLoginDeviceType(), device.getKey(), device.getValue(), account);
+            } else {
+                log.warn("检测到异地登录，废弃当前 token，account={}, oldIp={}, newIp={}",
+                        account, storedIp, realIp);
+                StpUtil.logout();
+            }
         }
 
         String storedPassword = accountPO.getPassword();
@@ -123,27 +135,39 @@ public class LoginServiceImpl {
             return Result.failure(accountType.getValue() + "或密码错误");
         }
 
-        boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
-                .set(AccountPO::getLastLoginIp, realIp)
-                .eq(AccountPO::getAccount, account));
-        if (!updated) {
-            log.error("更新最后登录 IP 失败，拒绝登录，account={}", account);
-            return Result.failure("登录失败，请稍后再试");
+        if (device == LoginDevice.BEDROCK) {
+            // 基岩版这次请求由 Geyser 扩展代发（device 只有在 X-ALogin-Key 校验通过时才会是 BEDROCK），
+            // 因此 real_ip 是扩展所在机器而不是玩家：写进 lastLoginIp 会污染数据，
+            // 也会给"同 IP 复用当前会话"的免密快捷路径一个假判据，这里只记日志不落库
+            log.info("基岩版登录由扩展代发，跳过 lastLoginIp 更新，account={}, real_ip={}", account, realIp);
+        } else {
+            boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+                    .set(AccountPO::getLastLoginIp, realIp)
+                    .eq(AccountPO::getAccount, account));
+            if (!updated) {
+                log.error("更新最后登录 IP 失败，拒绝登录，account={}", account);
+                return Result.failure("登录失败，请稍后再试");
+            }
+            accountCache.invalidate(account);
         }
 
-        accountCache.invalidate(account);
-
-        StpUtil.login(account, accountType.getKey());
-        log.info("登录成功，email={}, mcUuid={}", accountPO.getEmail(), accountPO.getMcUuid());
+        StpUtil.login(account, device.getKey());
+        StpUtil.getTokenSession().set("loginMethod", accountType.getKey());
+        log.info("登录成功，email={}, mcUuid={}, loginMethod={}, device={}",
+                accountPO.getEmail(), accountPO.getMcUuid(), accountType.getKey(), device.getKey());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-
-        dispatchLoginEvent(account, token);
+        // 本次登录刚生成的 token 随事件下发，避免下游按 account 反查"最后一个 token"取错端
+        dispatchLoginEvent(account, token, tokenInfo.getTokenValue());
         return Result.succeed(tokenInfo);
     }
 
-    private void dispatchLoginEvent(String account, String token) {
+    private void dispatchLoginEvent(String account, String token, String sessionToken) {
         if (token == null) return;
-        Dami.bus().send("LoginEvent", Map.of("account", account, "token", token));
+        Map<String, String> payload = new HashMap<>();
+        payload.put("account", account);
+        payload.put("token", token);
+        if (sessionToken != null && !sessionToken.isBlank()) payload.put("sessionToken", sessionToken);
+        Dami.bus().send("LoginEvent", payload);
     }
 
     private String getAccountId(LoginBO loginBO, AccountType accountType) {

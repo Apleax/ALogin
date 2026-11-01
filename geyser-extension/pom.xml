@@ -14,9 +14,10 @@
 
     <properties>
         <!-- 扩展由 Geyser 所在 JVM 加载, 编译到 Java 21 以匹配其运行环境 -->
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <geyser.api.version>2.11.3-SNAPSHOT</geyser.api.version>
         <geyser.event.version>1.1-SNAPSHOT</geyser.event.version>
+        <maven.compiler.release>25</maven.compiler.release>
     </properties>
 
     <dependencies>

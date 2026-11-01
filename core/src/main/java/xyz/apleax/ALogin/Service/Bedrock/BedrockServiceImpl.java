@@ -11,6 +11,7 @@ import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
@@ -54,7 +55,8 @@ public class BedrockServiceImpl {
         if (accountPO == null) return Result.failure("账号不存在");
         if (name != null && !name.isBlank() && !Objects.equals(name, accountPO.getBedrockName()))
             updateBedrockName(account, name);
-        StpUtil.login(account, AccountType.BEDROCK_XUID.getKey());
+        StpUtil.login(account, LoginDevice.BEDROCK.getKey());
+        StpUtil.getTokenSession().set("loginMethod", AccountType.BEDROCK_XUID.getKey());
         log.info("基岩版免密登录，account={}, xuid={}, name={}", account, xuid, name);
         return Result.succeed(StpUtil.getTokenInfo().getTokenValue());
     }
@@ -82,10 +84,13 @@ public class BedrockServiceImpl {
         }
         boolean updated;
         try {
-            updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+            LambdaUpdateWrapper<AccountPO> update = new LambdaUpdateWrapper<AccountPO>()
                     .set(AccountPO::getBedrockXuid, xuid)
-                    .set(AccountPO::getBedrockName, name)
-                    .eq(AccountPO::getAccount, account));
+                    .eq(AccountPO::getAccount, account);
+            // 名称只用于展示：扩展不总是能给出游戏名（空串/空白），此时保留库中旧值而不是覆盖成空
+            // （与 updateBedrockName、幂等分支同款判据）
+            if (name != null && !name.isBlank()) update.set(AccountPO::getBedrockName, name);
+            updated = accountService.update(update);
         } catch (RuntimeException e) {
             log.error("绑定基岩版 XUID 异常，account={}, xuid={}", account, xuid, e);
             return Result.failure("绑定失败，请稍后再试或联系管理员");

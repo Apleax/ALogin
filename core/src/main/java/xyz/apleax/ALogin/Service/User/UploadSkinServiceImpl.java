@@ -20,6 +20,7 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.Util.AvatarRenderer;
 import xyz.apleax.ALogin.Util.MailUtil;
 
 import javax.imageio.ImageIO;
@@ -152,8 +153,9 @@ public class UploadSkinServiceImpl implements LifecycleBean {
                         skinInfo.texture().data().value(),
                         skinInfo.texture().data().signature()));
 
-                writeSkinWithDeadlockRetry(account, mcUuid, skinUuid, skinData, properties);
-
+                // 头像贴图在事务外生成：纯 CPU 操作；生成失败不阻断皮肤保存（avatar 置空，读路径会现场生成）
+                byte[] avatarSheet = AvatarRenderer.buildSheet(skinData);
+                writeSkinWithDeadlockRetry(account, mcUuid, skinUuid, skinData, avatarSheet, properties);
                 accountCache.invalidate(account);
                 log.debug("皮肤异步处理成功，用户: {}", account);
             } catch (SkinProcessException e) {
@@ -211,12 +213,12 @@ public class UploadSkinServiceImpl implements LifecycleBean {
     }
 
     private void writeSkinWithDeadlockRetry(String account, UUID mcUuid, UUID skinUuid, byte[] skinData,
-                                            List<GameProfile.Property> properties) {
+                                            byte[] avatarSheet, List<GameProfile.Property> properties) {
         int attempt = 0;
         while (true) {
             attempt++;
             try {
-                skinPersistenceService.writeSkinAndAccount(account, mcUuid, skinUuid, skinData, properties);
+                skinPersistenceService.writeSkinAndAccount(account, mcUuid, skinUuid, skinData, avatarSheet, properties);
                 return;
             } catch (RuntimeException e) {
                 if (!isDeadlock(e) || attempt >= DB_MAX_ATTEMPTS) throw e;

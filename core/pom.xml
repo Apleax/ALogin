@@ -14,6 +14,16 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-logging-logback</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.fusesource.jansi</groupId>
+                    <artifactId>jansi</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>xyz.apleax</groupId>
             <artifactId>ALogin-entity</artifactId>
             <version>${project.parent.version}</version>
@@ -57,16 +67,6 @@
         <dependency>
             <groupId>org.simplejavamail</groupId>
             <artifactId>simple-java-mail</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>angus-mail</artifactId>
-                    <groupId>org.eclipse.angus</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.angus</groupId>
-            <artifactId>angus-mail</artifactId>
         </dependency>
         <!-- 缓存 -->
         <dependency>

@@ -24,8 +24,9 @@
 
     <properties>
         <!-- 由 ViaProxy 所在 JVM 加载，编译到 Java 17 以匹配其运行环境 -->
-        <java.version>17</java.version>
+        <java.version>25</java.version>
         <viaproxy.version>3.4.14</viaproxy.version>
+        <maven.compiler.release>25</maven.compiler.release>
     </properties>
 
     <dependencies>

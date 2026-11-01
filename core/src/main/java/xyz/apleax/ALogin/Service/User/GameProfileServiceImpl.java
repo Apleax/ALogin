@@ -15,6 +15,7 @@ import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Util.ClientIp;
 
 import java.util.Collections;
 import java.util.List;
@@ -69,8 +70,8 @@ public class GameProfileServiceImpl {
     private void updateLastLoginIp(String account, String playerIp) {
         if (playerIp == null) return;
         String ip = playerIp.trim();
-        if (ip.isEmpty() || ip.length() > 45 || ip.indexOf('/') >= 0
-                || ip.chars().anyMatch(Character::isWhitespace)) {
+        // 与其它登录入口共用同一判据（历史上这段逻辑在 4 处各写了一份）
+        if (!ClientIp.isValid(ip)) {
             log.warn("忽略格式非法的上报 IP，account={}, len={}", account, playerIp.length());
             return;
         }

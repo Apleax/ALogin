@@ -32,7 +32,7 @@ public class PremiumBindListener implements EventListener<Map<String, String>> {
             premiumService.bind(map.get("account"), new PremiumProfile(
                     UUID.fromString(map.get("premiumUuid")), map.getOrDefault("premiumName", "")));
         } catch (Exception e) {
-            log.warn("登录后正版绑定处理失败：{}", e.getMessage());
+            log.warn("登录后正版绑定处理失败", e);
         }
     }
 }
