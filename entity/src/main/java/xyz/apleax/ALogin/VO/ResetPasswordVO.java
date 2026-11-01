@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.VO;
 
 import lombok.Data;
-import org.noear.solon.validation.annotation.Email;
 import org.noear.solon.validation.annotation.Length;
 import org.noear.solon.validation.annotation.NotBlank;
 
@@ -11,7 +10,6 @@ import org.noear.solon.validation.annotation.NotBlank;
 @Data
 public class ResetPasswordVO {
     @NotBlank(message = "邮箱不能为空")
-    @Email(message = "邮箱格式错误")
     String email;
     @NotBlank(message = "验证码不能为空")
     @Length(min = 4, max = 4, message = "验证码长度必须为4")

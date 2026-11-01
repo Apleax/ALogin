@@ -1,4 +1,4 @@
-package xyz.apleax.ALogin.Service;
+package xyz.apleax.ALogin.Service.Remote;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import org.noear.dami2.solon.annotation.DamiTopic;
@@ -8,7 +8,7 @@ import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 
 /**
- * 账号Service
+ * 账号远程服务契约（Dami LPC topic: account）
  *
  * @author Apleax
  */
@@ -20,7 +20,6 @@ public interface AccountService {
      * @param accountBO   注册信息
      * @param verify_code 验证码
      * @param real_ip     真实ip
-     * @author Apleax
      */
     Result<String> register(AccountBO accountBO, String verify_code, String real_ip);
 
@@ -28,14 +27,14 @@ public interface AccountService {
      * 登录
      *
      * @param loginBO 登录信息
-     * @author Apleax
+     * @param token   进服会话临时 token（可为空）
      */
     Result<SaTokenInfo> login(LoginBO loginBO, String token);
 
     /**
      * 登出
      *
-     * @author Apleax
+     * @param token 保留参数（登出基于会话）
      */
     Result<Void> logout(String token);
 
@@ -45,7 +44,6 @@ public interface AccountService {
      * @param email        邮箱
      * @param verify_code  验证码
      * @param new_password 新密码
-     * @author Apleax
      */
     Result<Boolean> resetPassword(String email, String verify_code, String new_password);
 
@@ -53,7 +51,6 @@ public interface AccountService {
      * 邮箱验证码
      *
      * @param verifyCodeKey 验证码参数
-     * @author Apleax
      */
     Result<Long> verifyCode(VerifyCodeKey verifyCodeKey);
 }

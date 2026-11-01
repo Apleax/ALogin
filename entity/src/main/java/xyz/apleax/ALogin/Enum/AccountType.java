@@ -12,7 +12,9 @@ public enum AccountType {
     ACCOUNT("account", "账号"),
     EMAIL("email", "邮箱"),
     QQ_ACCOUNT("qq_account", "QQ号"),
-    UUID("mc_uuid", "MCUUID");
+    UUID("mc_uuid", "MCUUID"),
+    PREMIUM_UUID("premium_uuid", "正版UUID"),
+    BEDROCK_XUID("bedrock_xuid", "基岩版XUID");
     private final String key;
     private final String value;
 

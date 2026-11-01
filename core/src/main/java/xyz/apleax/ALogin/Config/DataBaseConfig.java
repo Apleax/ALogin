@@ -50,6 +50,9 @@ public class DataBaseConfig implements LifecycleBean {
         log.info("DataBaseConfig Loading Complete");
     }
 
+    /**
+     * 构建 DataSource；首次启用 vault 时的引导信息只打印到控制台，避免密钥落进日志文件
+     */
     @Managed(name = "DataBase", typed = true, index = -100)
     @Condition(onMissingBean = DataSource.class, onBean = VaultCoderImpl.class)
     public DataSource database(@Inject("${DataBase}") DatabaseProperties dbProps) {
@@ -65,16 +68,19 @@ public class DataBaseConfig implements LifecycleBean {
         String jdbcUrl = buildJdbcUrl(dbProps, choose);
         ds.setJdbcUrl(jdbcUrl);
         if (needGenerateVaultPassword) {
-            log.info("""
-                            Vault password: {}
-                            Encrypt database name: {}
-                            Encrypt database username: {}
-                            Encrypt database password: {}""",
+            System.out.printf("""
+                            ============ ALogin 数据库连接信息加密初始化 ============
+                              Vault password: %s
+                              Encrypt database name: %s
+                              Encrypt database username: %s
+                              Encrypt database password: %s
+                              请把以上内容填入配置文件，然后重启应用
+                              =================================================""",
                     vaultPassword,
                     VaultUtils.encrypt(dbProps.database()),
                     VaultUtils.encrypt(dbProps.username()),
                     VaultUtils.encrypt(dbProps.password()));
-            log.info("Fill in the above in the configuration file");
+            Solon.stop();
         }
         ds.setUsername(dbProps.username());
         ds.setPassword(dbProps.password());
@@ -179,8 +185,7 @@ public class DataBaseConfig implements LifecycleBean {
             for (String resource : ResourceUtil.scanResources("classpath:SQL/" + choose + "/*")) {
                 String name = resource.substring(resource.lastIndexOf("/") + 1, resource.lastIndexOf("."));
                 boolean tableExists;
-                // try-with-resources 确保 ResultSet/Statement 关闭，避免元数据查询泄漏游标
-                try (ResultSet rs = connection.getMetaData().getTables(null, null, name, new String[]{"TABLE"})) {
+                try (ResultSet rs = connection.getMetaData().getTables(connection.getCatalog(), null, name, new String[]{"TABLE"})) {
                     tableExists = rs.next();
                 }
                 if (tableExists) continue;

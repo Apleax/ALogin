@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Managed;
 import xyz.apleax.ALogin.MinestomServerInit;
+import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 
 import java.util.Optional;
 
@@ -21,9 +22,12 @@ import java.util.Optional;
 @Condition(onClass = MinecraftServer.class)
 public class PlayerDisconnectEventListener implements EventListener<@NotNull PlayerDisconnectEvent> {
     private final InstanceManager instanceManager;
+    private final PremiumAssertionService assertionService;
 
-    public PlayerDisconnectEventListener(InstanceManager instanceManager) {
+    public PlayerDisconnectEventListener(InstanceManager instanceManager,
+                                         PremiumAssertionService assertionService) {
         this.instanceManager = instanceManager;
+        this.assertionService = assertionService;
     }
 
     @Override
@@ -38,6 +42,7 @@ public class PlayerDisconnectEventListener implements EventListener<@NotNull Pla
                                 .get(event.getPlayer().getUuid())))
                 .ifPresent(instanceManager::unregisterInstance);
         MinestomServerInit.playerInstanceMap.remove(event.getPlayer().getUuid());
+        assertionService.discard(event.getPlayer().getUuid());
         SaTempUtil.getTempTokenList(event.getPlayer().getUuid()).forEach(
                 SaTempUtil::deleteToken
         );

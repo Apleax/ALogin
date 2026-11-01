@@ -116,6 +116,7 @@ public class RegisterServiceImpl {
 
     /**
      * 组装账号数据：生成唯一 account、从 LibreLogin 迁移历史数据、加密密码。
+     * LibreLogin 表在全新部署中不存在，迁移失败不阻断注册。
      *
      * @return 是否成功
      */
@@ -127,11 +128,16 @@ public class RegisterServiceImpl {
         }
         accountBO.setAccount(account);
 
-        // 从 LibreLogin 迁移数据（若存在同邮箱记录）
-        List<LibreLoginPO> libreLoginPOS = libreLoginMapper.selectList(
-                new LambdaQueryWrapper<LibreLoginPO>()
-                        .eq(LibreLoginPO::getEmail, accountBO.getEmail())
-                        .orderByAsc(LibreLoginPO::getJoined));
+        List<LibreLoginPO> libreLoginPOS;
+        try {
+            libreLoginPOS = libreLoginMapper.selectList(
+                    new LambdaQueryWrapper<LibreLoginPO>()
+                            .eq(LibreLoginPO::getEmail, accountBO.getEmail())
+                            .orderByAsc(LibreLoginPO::getJoined));
+        } catch (RuntimeException e) {
+            log.warn("查询 LibreLogin 数据失败，跳过迁移，email={}: {}", accountBO.getEmail(), e.getMessage());
+            libreLoginPOS = List.of();
+        }
         if (!libreLoginPOS.isEmpty()) {
             LibreLoginPO first = libreLoginPOS.getFirst();
             // LibreLogin 表中 joined 为 MySQL timestamp，转换为秒级时间戳

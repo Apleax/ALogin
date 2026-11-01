@@ -2,6 +2,7 @@ package xyz.apleax.ALogin;
 
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,9 @@ public class AppFitter implements Filter {
             ctx.render(Result.failure("未登录"));
         } catch (NotPermissionException e) {
             ctx.render(Result.failure("你没有这个权限"));
+        } catch (NotRoleException e) {
+            // Sa-Token 固定命名（role），本项目语义为 LuckPerms 权限组
+            ctx.render(Result.failure("你没有这个权限组"));
         } catch (ValidatorException e) {
             ctx.render(Result.failure(e.getMessage()));
         } catch (ConstructionException |

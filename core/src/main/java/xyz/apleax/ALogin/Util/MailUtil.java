@@ -1,5 +1,6 @@
 package xyz.apleax.ALogin.Util;
 
+import jakarta.mail.Message;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
@@ -8,11 +9,13 @@ import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.util.ResourceUtil;
 import org.simplejavamail.api.mailer.Mailer;
 import org.simplejavamail.email.EmailBuilder;
+import org.simplejavamail.recipient.RecipientBuilder;
 
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,9 +30,9 @@ public final class MailUtil {
     private static final Map<String, String> TEMPLATE_CACHE = new ConcurrentHashMap<>();
 
     private static final String TPL_VERIFY_CODE = "email/RegVerifyCode.html";
-    private static final String TPL_IP_CHANGE_ALERT = "email/LoginIpChangeAlert.html";
     private static final String TPL_PASSWORD_RESET_NOTIFY = "email/PasswordResetNotify.html";
     private static final String TPL_SKIN_UPLOAD_FAILED = "email/SkinUploadFailed.html";
+    private static final String TPL_PERMISSION_CHANGE_NOTIFY = "email/PermissionChangeNotify.html";
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -70,37 +73,6 @@ public final class MailUtil {
     }
 
     /**
-     * 异步发送异地登录提醒邮件。
-     *
-     * @param toEmail 收件人邮箱（为空则跳过）
-     * @param account 账号
-     * @param oldIp   上次登录 IP
-     * @param newIp   本次登录 IP
-     */
-    public static void sendIpChangeAlertAsync(String toEmail, String account, String oldIp, String newIp) {
-        if (toEmail == null || toEmail.isBlank()) {
-            log.debug("收件人为空，跳过异地登录提醒");
-            return;
-        }
-        String time = LocalDateTime.now().format(DATETIME_FMT);
-        String subject = "[" + serverName + "] 异地登录提醒";
-        IpLocationUtil.queryAsync(oldIp)
-                .thenCombine(IpLocationUtil.queryAsync(newIp), (oldLocation, newLocation) -> {
-                    sendTemplateAsync(toEmail, subject, TPL_IP_CHANGE_ALERT, Map.of(
-                            "<account/>", account,
-                            "<time/>", time,
-                            "<oldip/>", safe(oldIp),
-                            "<newip/>", safe(newIp),
-                            "<oldlocation/>", oldLocation,
-                            "<newlocation/>", newLocation
-                    ));
-                    log.debug("异地登录提醒邮件已发送，收件人: {}, 账号: {}, 旧 IP: {}, 新 IP: {}, 旧归属地: {}, 新归属地: {}",
-                            toEmail, account, oldIp, newIp, oldLocation, newLocation);
-                    return null;
-                });
-    }
-
-    /**
      * 异步发送密码重置成功通知邮件。
      *
      * @param toEmail 收件人邮箱
@@ -134,6 +106,39 @@ public final class MailUtil {
         ));
     }
 
+    /**
+     * 异步发送 LuckPerms 权限变更通知邮件（高敏操作，批量发送给预配置的收件人列表）。
+     *
+     * @param toEmails 收件人邮箱列表（为空或全为空白则跳过）
+     * @param operator 操作者账号
+     * @param target   被修改权限的目标账号（或 mcUuid）
+     * @param summary  本次批量变更的可读摘要，多行文本
+     */
+    public static void sendPermissionChangeNotifyAsync(List<String> toEmails, String operator, String target, String summary) {
+        if (toEmails == null || toEmails.isEmpty()) {
+            log.debug("收件人列表为空，跳过权限变更通知");
+            return;
+        }
+        String subject = "[" + serverName + "] LuckPerms 权限变更通知";
+        Map<String, String> placeholders = Map.of(
+                "<operator/>", safe(operator),
+                "<target/>", safe(target),
+                "<summary/>", safe(summary),
+                "<time/>", LocalDateTime.now().format(DATETIME_FMT)
+        );
+        try {
+            for (String toEmail : toEmails) {
+                if (toEmail == null || toEmail.isBlank()) {
+                    log.debug("收件人为空，跳过权限变更通知");
+                    continue;
+                }
+                sendTemplateAsync(toEmail, subject, TPL_PERMISSION_CHANGE_NOTIFY, placeholders);
+            }
+        } catch (Exception e) {
+            log.warn("权限变更通知邮件提交异常，主题: {}，原因: {}", subject, e.getMessage());
+        }
+    }
+
 
     /**
      * 异步发送模板邮件。
@@ -165,6 +170,10 @@ public final class MailUtil {
             log.warn("发件人邮箱未配置，无法发送邮件，收件人: {}", toEmail);
             return false;
         }
+        if (mailer == null) {
+            log.warn("邮件发送器未初始化，无法发送邮件，收件人: {}", toEmail);
+            return false;
+        }
         String html = buildHtml(templateRelativePath, placeholders, fallbackHtml);
         if (html == null || html.isBlank()) {
             log.warn("邮件正文为空，跳过发送，收件人: {}", toEmail);
@@ -173,8 +182,12 @@ public final class MailUtil {
         try {
             mailer.sendMail(EmailBuilder.startingBlank()
                                     .from(fromName, fromEmail)
+                                    .withRecipients(new RecipientBuilder()
+                                            .withAddress(toEmail)
+                                            .withType(Message.RecipientType.TO)
+                                            .build()
+                                    )
                                     .withSubject(subject)
-                                    .to(toEmail)
                                     .withHTMLText(html)
                                     .buildEmail()
                             , true)
