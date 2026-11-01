@@ -15,11 +15,12 @@ import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Service.User.AvatarDefaultProvider;
+import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
-import java.net.http.HttpClient;
+import java.awt.image.BufferedImage;
 import java.time.Duration;
-import java.util.List;
 
 /**
  * 所有的缓存配置
@@ -29,16 +30,10 @@ import java.util.List;
 @Slf4j
 @Configuration
 public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) implements LifecycleBean {
-    private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，值为 '{}'，原因：{}";
-
-    private static final String API_TEMPLATE = "https://www.badqin.top/luckperms/%s";
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，原因：{}";
 
     private static void onRemoval(Object key, Object value, RemovalCause cause) {
-        log.debug(CACHE_REMOVED_SIMPLE, key, value, cause);
+        log.debug(CACHE_REMOVED_SIMPLE, key, cause);
     }
 
     @Override
@@ -90,34 +85,25 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                         case ACCOUNT -> queryWrapper.eq(AccountPO::getAccount, Type.value());
                         case EMAIL -> queryWrapper.eq(AccountPO::getEmail, Type.value());
                         case QQ_ACCOUNT -> queryWrapper.eq(AccountPO::getQqAccount, Type.value());
-                        case UUID -> queryWrapper.eq(AccountPO::getMcUuid, "\"" + Type.value() + "\"");
+                        case UUID -> queryWrapper.eq(AccountPO::getMcUuid, UuidTypeHandler.parse(Type.value()));
+                        case PREMIUM_UUID ->
+                                queryWrapper.eq(AccountPO::getPremiumUuid, UuidTypeHandler.parse(Type.value()));
+                        case BEDROCK_XUID -> queryWrapper.eq(AccountPO::getBedrockXuid, Type.value());
                     }
-                    if (!accountService.exists(queryWrapper)) return null;
-                    return accountService.getOne(queryWrapper).getAccount();
+                    AccountPO accountPO = accountService.getOne(queryWrapper);
+                    return accountPO == null ? null : accountPO.getAccount();
                 });
     }
 
-    //TODO 角色缓存
-    public LoadingCache<@NotNull String, List<String>> RoleCache() {
+    // 默认头像缓存：key = 配置的来源（Avatar.default-source）。加载失败返回 null，
+    // Caffeine 不缓存 null，所以配置修好后下一次请求立即生效，也不会把失败结果缓存住。
+    @Managed(name = "AvatarDefaultCache", index = -100)
+    public LoadingCache<@NotNull String, BufferedImage> AvatarDefaultCache() {
         return Caffeine.newBuilder()
                 .removalListener(CaffeineConfig::onRemoval)
-                .maximumSize(10_000)
-                .initialCapacity(2000)
-                .expireAfterAccess(Duration.ofHours(12))
-                .refreshAfterWrite(Duration.ofHours(1))
+                .maximumSize(4)
+                .expireAfterWrite(Duration.ofHours(1))
                 .recordStats()
-                .build(key -> null);
-    }
-
-    //TODO 权限缓存
-    public LoadingCache<@NotNull String, List<String>> PermissionCache() {
-        return Caffeine.newBuilder()
-                .removalListener(CaffeineConfig::onRemoval)
-                .maximumSize(10_000)
-                .initialCapacity(2000)
-                .expireAfterAccess(Duration.ofHours(12))
-                .refreshAfterWrite(Duration.ofHours(1))
-                .recordStats()
-                .build(key -> null);
+                .build(AvatarDefaultProvider::resolve);
     }
 }

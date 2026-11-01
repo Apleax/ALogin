@@ -15,10 +15,12 @@ import org.mineskin.response.MineSkinResponse;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
+import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.Util.AvatarRenderer;
 import xyz.apleax.ALogin.Util.MailUtil;
 
 import javax.imageio.ImageIO;
@@ -38,7 +40,7 @@ import java.util.concurrent.*;
 @Slf4j
 @Managed
 @DamiTopic("user")
-public class UploadSkinServiceImpl {
+public class UploadSkinServiceImpl implements LifecycleBean {
     private static final int MOJANG_BROKEN_UUID_LENGTH = 32;
     /**
      * 皮肤文件最大字节数：200 KB
@@ -68,7 +70,7 @@ public class UploadSkinServiceImpl {
     /**
      * 皮肤异步处理执行器：每任务分配一虚拟线程
      */
-    private static final ExecutorService SKIN_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService skinExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
     private final MineSkinClient skinsClient;
@@ -83,6 +85,11 @@ public class UploadSkinServiceImpl {
         this.skinPersistenceService = skinPersistenceService;
     }
 
+    @Override
+    public void stop() {
+        skinExecutor.shutdownNow();
+    }
+
     /**
      * 皮肤上传入口：同步只做校验，皮肤格式正确立即返回，实际处理转异步。
      */
@@ -95,6 +102,12 @@ public class UploadSkinServiceImpl {
         if (account == null) return Result.succeed(false);
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) return Result.succeed(false);
+
+        if (skin.getContentSize() > MAX_SKIN_FILE_SIZE) {
+            log.warn("皮肤文件超过大小上限，用户: {}，size={} bytes", account, skin.getContentSize());
+            skin.delete();
+            return Result.failure("皮肤文件不能超过 200KB", false);
+        }
 
         byte[] skinData;
         try {
@@ -124,7 +137,7 @@ public class UploadSkinServiceImpl {
      * 任一环节最终失败则发邮件提醒用户。
      */
     private void processSkinAsync(String account, UUID mcUuid, String nickName, String email, String variant, byte[] skinData) {
-        SKIN_EXECUTOR.submit(() -> {
+        skinExecutor.submit(() -> {
             try {
                 SkinInfo skinInfo = submitToMineSkin(account, nickName, variant, skinData);
 
@@ -140,8 +153,9 @@ public class UploadSkinServiceImpl {
                         skinInfo.texture().data().value(),
                         skinInfo.texture().data().signature()));
 
-                writeSkinWithDeadlockRetry(account, mcUuid, skinUuid, skinData, properties);
-
+                // 头像贴图在事务外生成：纯 CPU 操作；生成失败不阻断皮肤保存（avatar 置空，读路径会现场生成）
+                byte[] avatarSheet = AvatarRenderer.buildSheet(skinData);
+                writeSkinWithDeadlockRetry(account, mcUuid, skinUuid, skinData, avatarSheet, properties);
                 accountCache.invalidate(account);
                 log.debug("皮肤异步处理成功，用户: {}", account);
             } catch (SkinProcessException e) {
@@ -199,12 +213,12 @@ public class UploadSkinServiceImpl {
     }
 
     private void writeSkinWithDeadlockRetry(String account, UUID mcUuid, UUID skinUuid, byte[] skinData,
-                                            List<GameProfile.Property> properties) {
+                                            byte[] avatarSheet, List<GameProfile.Property> properties) {
         int attempt = 0;
         while (true) {
             attempt++;
             try {
-                skinPersistenceService.writeSkinAndAccount(account, mcUuid, skinUuid, skinData, properties);
+                skinPersistenceService.writeSkinAndAccount(account, mcUuid, skinUuid, skinData, avatarSheet, properties);
                 return;
             } catch (RuntimeException e) {
                 if (!isDeadlock(e) || attempt >= DB_MAX_ATTEMPTS) throw e;
@@ -299,7 +313,7 @@ public class UploadSkinServiceImpl {
 
         return UUID.fromString(formattedUuid);
     }
-    
+
     private static class SkinProcessException extends RuntimeException {
         final String userMessage;
 

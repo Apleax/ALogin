@@ -40,6 +40,8 @@ public record SimpleJavaMailConfig() implements LifecycleBean {
     @Managed(index = -100)
     public Mailer SimpleJavaMailBuilder() {
         log.info("SimpleJavaMailConfig Loading...");
+        if (HostName == null || HostName.isBlank() || Port == null)
+            throw new IllegalArgumentException("邮件服务未完整配置（EmailConfig.HostName/Port）");
         MailerRegularBuilderImpl mailerRegularBuilder = MailerBuilder
                 .withSMTPServer(HostName, Port, UserName, Password);
         switch (Port) {

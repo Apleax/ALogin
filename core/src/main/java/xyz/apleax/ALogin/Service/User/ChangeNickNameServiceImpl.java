@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
@@ -15,6 +16,7 @@ import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -40,6 +42,9 @@ public class ChangeNickNameServiceImpl {
         this.accountCache = accountCache;
     }
 
+    /**
+     * 修改昵称；并发撞唯一索引时返回友好提示（exists 检查与 update 之间存在竞态窗口）
+     */
     @Transaction
     public Result<Boolean> changeNickName(String nickname) {
         String account = StpUtil.getLoginIdAsString();
@@ -86,11 +91,20 @@ public class ChangeNickNameServiceImpl {
             return Result.failure("该用户名已被使用，请更换其他用户名", false);
         }
 
-        boolean updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
-                .eq(AccountPO::getAccount, account)
-                .set(AccountPO::getNickName, nickname)
-                .set(AccountPO::getPreviousName, oldNickName)
-                .set(AccountPO::getLastChangeNickNameTime, now));
+        boolean updated;
+        try {
+            updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+                    .eq(AccountPO::getAccount, account)
+                    .set(AccountPO::getNickName, nickname)
+                    .set(AccountPO::getPreviousName, oldNickName)
+                    .set(AccountPO::getLastChangeNickNameTime, now));
+        } catch (RuntimeException e) {
+            if (isDuplicateKey(e)) {
+                log.debug("用户名 [{}] 并发占用冲突，用户: {}", nickname, account);
+                return Result.failure("该用户名已被使用，请更换其他用户名", false);
+            }
+            throw e;
+        }
         if (!updated) return Result.succeed(false);
 
         accountService.update(new LambdaUpdateWrapper<AccountPO>()
@@ -110,5 +124,17 @@ public class ChangeNickNameServiceImpl {
         if (millis <= 0L) return 0L;
         long dayMillis = 24L * 60 * 60 * 1000;
         return (millis + dayMillis - 1) / dayMillis;
+    }
+
+    /**
+     * 判断异常链中是否包含 SQL 完整性约束冲突（SQLState 23xxx）
+     */
+    private static boolean isDuplicateKey(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause())
+            if (c instanceof SQLException sqlEx) {
+                String state = sqlEx.getSQLState();
+                if (state != null && state.startsWith("23")) return true;
+            }
+        return false;
     }
 }

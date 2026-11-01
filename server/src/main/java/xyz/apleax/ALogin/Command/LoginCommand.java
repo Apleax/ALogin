@@ -6,101 +6,226 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.command.ArgumentParserType;
+import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.command.builder.arguments.ArgumentString;
-import net.minestom.server.command.builder.arguments.ArgumentType;
+import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.entity.Player;
-import net.minestom.server.network.packet.server.common.TransferPacket;
+import net.minestom.server.network.NetworkBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
+import org.noear.dami2.Dami;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Condition;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
+import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
+import xyz.apleax.ALogin.Config.PermissionProperties;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
+import xyz.apleax.ALogin.POJO.PremiumAssertion;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Service.Permission.PermissionService;
+import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
+import xyz.apleax.ALogin.Util.Encrypt.EncryptorSelector;
 import xyz.apleax.ALogin.Util.Encrypt.PasswordEncryptor;
+import xyz.apleax.ALogin.Util.TransferAddress;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
- *
+ * 游戏内 /l 登录指令：耗时操作（缓存加载/密码哈希/数据库写入）在独立线程执行，避免阻塞 tick 线程
  *
  * @author Apleax
  */
 @Slf4j
 @Managed
 @Condition(onClass = MinecraftServer.class)
-public class LoginCommand extends Command {
+public class LoginCommand extends Command implements LifecycleBean {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9_-]+@[A-Za-z0-9]+(\\.[A-Za-z0-9-]+)+$");
-    private static final String transfer = Solon.cfg().get("minestom.transfer");
-    private static final String cookieKey = Solon.cfg().get("minestom.cookie-key");
+    private static final long ATTEMPT_COOLDOWN_MILLIS = 1_000L;
+
+    private final TransferAddress transfer = TransferAddress.parse(Solon.cfg().get("minestom.transfer"));
+    private final String cookieKey = Solon.cfg().get("minestom.cookie-key");
+    private final ExecutorService loginExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final Map<UUID, Long> lastAttempts = new ConcurrentHashMap<>();
+
+    private final PremiumAssertionService assertionService;
+    private final IAccountService accountService;
+    private final LoadingCache<@NotNull String, AccountPO> accountCache;
+    private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
+    private final PasswordEncryptor encryptor;
+    private final EncryptorSelector selector;
 
     public LoginCommand(@Ds("DataBase") IAccountService accountService,
                         @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
                         @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
-                        @Inject("Algorithm") PasswordEncryptor encryptor) {
+                        @Inject("Algorithm") PasswordEncryptor encryptor,
+                        EncryptorSelector selector,
+                        PremiumAssertionService assertionService,
+                        PermissionService permissionService) {
         super("login", "l");
+        this.assertionService = assertionService;
+        this.accountService = accountService;
+        this.accountCache = accountCache;
+        this.accountIndexCache = accountIndexCache;
+        this.encryptor = encryptor;
+        this.selector = selector;
 
-        setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
+        setDefaultExecutor((sender, _) -> sender.sendMessage("用法: /l <邮箱> <密码>"));
 
-        ArgumentString email = ArgumentType.String("'邮箱'");
-        ArgumentString password = ArgumentType.String("'密码'");
-
-        email.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
-
-        password.setCallback((sender, _) -> sender.sendMessage("用法: /l '<邮箱>' '<密码>'"));
+        GreedyCredentials credentials = new GreedyCredentials("'邮箱' '密码'");
 
         addSyntax((sender, context) -> {
-            String emailStr = context.get(email);
-            String passwordStr = context.get(password);
+            String input = context.get(credentials);
+            int split = input.indexOf(' ');
+            if (split <= 0 || split == input.length() - 1) {
+                sender.sendMessage("用法: /l <邮箱> <密码>");
+                return;
+            }
+            String emailStr = input.substring(0, split);
+            String passwordStr = input.substring(split + 1);
             if (!isEmail(emailStr)) {
                 sender.sendMessage("邮箱格式错误");
                 return;
             }
-            String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, emailStr));
-            if (account == null) {
-                sender.sendMessage(AccountType.EMAIL.getValue() + "不存在");
+            if (!(sender instanceof Player player)) return;
+            long now = System.currentTimeMillis();
+            Long previous = lastAttempts.put(player.getUuid(), now);
+            if (previous != null && now - previous < ATTEMPT_COOLDOWN_MILLIS) {
+                sender.sendMessage("操作过于频繁，请稍后再试");
                 return;
             }
-            Player player = null;
-            if (sender instanceof Player) player = (Player) sender;
-            if (player == null) return;
-            AccountPO accountPO = accountCache.get(account);
-            if (accountPO == null) {
-                sender.sendMessage(AccountType.EMAIL.getValue() + "不存在");
+            loginExecutor.submit(() -> {
+                try {
+                    // 权限鉴定会走 HTTP，必须在虚拟线程内执行；未配置权限（返回 null）时保持原有行为
+                    try {
+                        // 同一指令可能命中多条规则，全部生效（逻辑与）；group 即 LuckPerms 权限组
+                        for (PermissionProperties.Command.Rule rule : permissionService.matchCommandRules(getNames())) {
+                            if (rule.permission() != null && !rule.permission().isBlank()
+                                    && !permissionService.hasPermission(player.getUuid(), rule.permission())) {
+                                player.sendMessage("你没有权限执行该指令");
+                                return;
+                            }
+                            if (rule.group() != null && !rule.group().isBlank()
+                                    && !permissionService.hasGroup(player.getUuid(), rule.group())) {
+                                player.sendMessage("你没有权限执行该指令");
+                                return;
+                            }
+                        }
+                    } catch (Exception e) {
+                        // 鉴定异常按无权限处理，与 PermissionService 的 fail-closed 策略保持一致
+                        log.warn("指令权限鉴定异常，player={}，指令={}: {}", player.getUuid(), getName(), e.getMessage());
+                        player.sendMessage("你没有权限执行该指令");
+                        return;
+                    }
+                    doLogin(player, emailStr, passwordStr);
+                } catch (Exception e) {
+                    log.warn("登录指令处理异常，player={}: {}", player.getUuid(), e.getMessage());
+                    player.sendMessage("登录失败，请稍后再试");
+                }
+            });
+        }, credentials);
+    }
+
+    @Override
+    public void stop() {
+        loginExecutor.shutdownNow();
+    }
+
+    /**
+     * 校验并完成登录，写入进服 cookie 后转移玩家；密码按账号记录的算法验证（存量账号可能使用旧算法）
+     */
+    private void doLogin(Player player, String emailStr, String passwordStr) {
+        String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, emailStr));
+        if (account == null) {
+            player.sendMessage(AccountType.EMAIL.getValue() + "不存在");
+            return;
+        }
+        AccountPO accountPO = accountCache.get(account);
+        if (accountPO == null) {
+            player.sendMessage(AccountType.EMAIL.getValue() + "不存在");
+            return;
+        }
+        PasswordEncryptor actualEncryptor = encryptor;
+        String storedAlgorithm = accountPO.getAlgorithm();
+        if (storedAlgorithm != null && !storedAlgorithm.isBlank()) {
+            actualEncryptor = selector.select(storedAlgorithm);
+            if (actualEncryptor == null) {
+                log.error("账号 [{}] 使用的加密算法 [{}] 已不可用", account, storedAlgorithm);
+                player.sendMessage("该账号使用的加密算法已失效，请联系管理员");
                 return;
             }
-            String passwordHex = encryptor.encrypt(passwordStr, accountPO.getSalt());
-            if (!accountPO.getPassword().equals(passwordHex)) {
-                sender.sendMessage(AccountType.EMAIL.getValue() + "或密码错误");
-                return;
-            }
-            SaTokenContextMockUtil.setMockContext();
-            StpUtil.login(accountPO.getAccount(), AccountType.EMAIL.getKey());
+        }
+        String passwordHex = actualEncryptor.encrypt(passwordStr, accountPO.getSalt());
+        if (!accountPO.getPassword().equals(passwordHex)) {
+            player.sendMessage(AccountType.EMAIL.getValue() + "或密码错误");
+            return;
+        }
+        SaTokenContextMockUtil.setMockContext();
+        try {
+            StpUtil.login(account, LoginDevice.GAME.getKey());
+            StpUtil.getTokenSession().set("loginMethod", AccountType.EMAIL.getKey());
+            // 只取纯 IP, InetSocketAddress#toString 会带 "/" 和端口
+            String realIp = ((InetSocketAddress) player.getPlayerConnection().getRemoteAddress())
+                    .getHostString();
             boolean updated = accountService.update((new LambdaUpdateWrapper<AccountPO>()
-                    .set(AccountPO::getLastLoginIp, player.getPlayerConnection().getRemoteAddress().toString())
-                    .eq(AccountPO::getAccount, accountPO.getAccount())));
-            if (updated) accountCache.put(accountPO.getAccount(), accountPO);
-            else log.warn("Failed to update last login time for account: {}", accountPO.getAccount());
-            String address;
-            int port;
-            if (transfer.contains(":")) {
-                address = transfer.split(":")[0];
-                port = Integer.parseInt(transfer.split(":")[1]);
-            } else {
-                address = transfer;
-                port = 25565;
+                    .set(AccountPO::getLastLoginIp, realIp)
+                    .eq(AccountPO::getAccount, account)));
+            if (updated) accountCache.invalidate(account);
+            else log.debug("最后登录 IP 无变化或更新失败，account={}", account);
+            // 首次绑定：本次会话是正版时把正版 UUID 写入该账号（无断言则不触发）
+            PremiumAssertion assertion = assertionService.get(player.getUuid());
+            if (assertion != null) Dami.bus().send("PremiumBind", Map.of("account", account,
+                    "premiumUuid", assertion.uuid().toString(),
+                    "premiumName", assertion.name() == null ? "" : assertion.name()));
+            // 取本次刚生成的 token（按 account 反查"最后一个 token"在多端并存时会取到别的端）
+            String tokenValue = StpUtil.getTokenValue();
+            if (tokenValue == null || tokenValue.isBlank()) {
+                log.warn("登录指令处理失败：无法获取会话 token，account={}", account);
+                player.sendMessage("登录失败，请稍后再试");
+                return;
             }
-            player.getPlayerConnection().storeCookie(cookieKey + ":token", StpUtil.getTokenValueByLoginId(account).getBytes(StandardCharsets.UTF_8));
-            player.sendPacket(new TransferPacket(address, port));
-        }, email, password);
+            player.getPlayerConnection().storeCookie(cookieKey + ":token", tokenValue.getBytes(StandardCharsets.UTF_8));
+            player.getPlayerConnection().transfer(transfer.host(), transfer.port());
+        } finally {
+            SaTokenContextMockUtil.clearContext();
+        }
     }
 
     private boolean isEmail(String input) {
         return EMAIL_PATTERN.matcher(input).matches();
+    }
+
+    private static final class GreedyCredentials extends Argument<String> {
+
+        private GreedyCredentials(String id) {
+            super(id, true, true);
+        }
+
+        @Override
+        public @NonNull String parse(@NonNull CommandSender sender, @NonNull String input) {
+            return input;
+        }
+
+        @Override
+        public @NonNull ArgumentParserType parser() {
+            return ArgumentParserType.STRING;
+        }
+
+        @Override
+        public byte[] nodeProperties() {
+            return NetworkBuffer.makeArray(NetworkBuffer.VAR_INT, 2);
+        }
     }
 }

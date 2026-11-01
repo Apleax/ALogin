@@ -13,10 +13,9 @@ solon.logging.appender:
   file:
     enable: true
     level: DEBUG
-    name: "logs/${solon.app.name}"
+    name: "/opt/logs/${solon.app.name}"
+    rolling: "/opt/logs/${solon.app.name}_%d{yyyy-MM-dd}_%i.log"
     extension: ".log"
-    maxFileSize: "10 MB"
-    maxHistory: "7"
 
 server:
   http:

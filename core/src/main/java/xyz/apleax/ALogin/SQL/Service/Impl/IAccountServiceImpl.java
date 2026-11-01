@@ -1,6 +1,6 @@
 package xyz.apleax.ALogin.SQL.Service.Impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
 import org.noear.solon.annotation.Managed;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.SQL.Mapper.AccountMapper;

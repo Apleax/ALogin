@@ -1,0 +1,92 @@
+# LuckPerms 权限系统集成配置（独立于 config.yml，便于单独维护）
+#
+# 设计要点：
+#   - 权限数据以 LuckPerms 为唯一权威来源，本文件只决定"ALogin 如何鉴定、如何使用"
+#   - 身份键为 mcUuid：鉴定前用 8 位账号换取 account.mc_uuid，未绑定 mcUuid 的账号一律无权限
+#   - 鉴定失败（超时/不可达/异常响应）默认按"无权限"处理（fail-closed）
+#   - 关闭 enabled 时不会加载任何规则，接口与指令的权限鉴定全部跳过（行为与集成前一致）
+Permission:
+  # 权限鉴定总开关
+  enabled: true
+
+  # LuckPerms REST API 地址；与 ALogin 同局域网时可直接填写容器名，如 http://luckperms:8080
+  base-url: "http://luckperms:8080"
+  # 访问密钥，对应 LuckPerms 侧 LUCKPERMS_REST_AUTH_KEYS 中的一项；留空表示不携带 Authorization 头
+  api-key: ""
+
+  # 连接超时 / 请求超时（毫秒）
+  connect-timeout-ms: 2000
+  request-timeout-ms: 3000
+
+  # 权限与权限组缓存有效期（秒）：ALogin 自身写入后立即失效，此处兜底游戏内/后台的变更
+  cache-ttl-seconds: 120
+  # 权限组的权限节点缓存有效期（秒）：继承展开时使用，组数据变更频率低
+  group-cache-ttl-seconds: 600
+
+  # 鉴定失败时的行为：true=按无权限拒绝（fail-closed，默认，推荐）
+  fail-closed: true
+
+  # 权限组：直接取 LuckPerms 的组归属（直接所属 + 继承得到的组），无需节点前缀映射
+  # 说明：组是 LuckPerms 的权威数据，本文件不维护组定义；default 由 LuckPerms 为每个用户隐式注入
+
+  # 接口权限鉴定：命中规则的请求在登录校验通过后，再校验权限节点与/或权限组；未命中的接口不受影响
+  # path 支持 * 通配；method 留空表示匹配所有方法；每条规则可用 enabled: false 单独关闭
+  # permission 与 group 至少配置一个，可同时配置
+  # 同一请求可能命中多条规则（如通配规则 + 精确规则），**所有命中的规则都会生效（逻辑与）**，不会被静默覆盖
+  # group 的取值是 LuckPerms 的组名（如 admins、vip）：用户直接所属或经其它组继承得到的组都算
+  #
+  # 与 Sa-Token 注解（@SaCheckPermission）的关系：
+  #   1) 不冲突：两者最终都调用同一个 StpUtil.checkPermission/checkRole → 同一份 StpInterface → 同一份 LuckPerms 数据；
+  #      若同时配置，语义是"逻辑与"（注解与规则都必须通过），请勿混用以免排查困难。
+  #   2) 本项目统一用本文件管理节点、权限组与启停，业务代码不写死权限注解，改配置即可调整。
+  #   3) Sa-Token 把"权限组"固定命名为 role（@SaCheckRole / StpUtil.checkRole / getRoleList），那是框架接口名，
+  #      本项目里它承载的语义就是 LuckPerms 权限组。
+  #   4) 带 @SaIgnore 的接口会同时绕过注解与规则：公开接口请靠"不配规则"来表达，不要以为配了规则就一定会拦。
+  #   5) 启动时会自检每条规则的 path 是否命中已注册路由，未命中会打 WARN（防止路径写错导致接口静默无鉴权）。
+  api:
+    enabled: true
+    rules:
+      # 缓存刷新（原硬编码特权账号已移除，改为权限节点判定）
+      - enabled: true
+        path: "/api/web/account/RefreshCache"
+        method: "POST"
+        permission: "alogin.account.cache.refresh"
+      # 权限组校验示例：只允许 LuckPerms 组 admins 的成员访问，默认关闭，需要时把 enabled 改为 true
+      - enabled: false
+        path: "/api/web/account/RefreshCache"
+        method: "POST"
+        group: "admins"
+      # 受控批量修改 LuckPerms 权限节点
+      # 该接口在控制器内还有一道基于 Permission.write.require-permission 的显式校验（有意保留的双保险）：
+      #   - 本规则 = 拦截器层最早拦截，受 api.enabled 总开关控制
+      #   - 控制器校验 = 跟随 Permission.write.* 配置，即使规则被整体关闭，受控写入依然要求编辑权限
+      - enabled: true
+        path: "/api/web/permission/Nodes"
+        method: "POST"
+        permission: "alogin.permission.edit"
+
+  # 内置登录服指令鉴定：指令名（含别名）→ 权限节点与/或权限组
+  # 默认全部关闭，避免影响现有玩家登录流程；需要时把对应规则的 enabled 改为 true
+  # permission 与 group 至少配一个，可同时配置（同时配置时为"逻辑与"）
+  command:
+    enabled: true
+    rules:
+      - enabled: false
+        name: "l"
+        permission: "alogin.command.login"
+      - enabled: false
+        name: "login"
+        permission: "alogin.command.login"
+      # 权限组校验示例（默认关闭）：只允许 admins 组成员使用 /l
+      - enabled: false
+        name: "l"
+        group: "admins"
+
+  # 高敏操作（修改 LuckPerms 权限）通知邮箱列表：批量变更内容会发送到这里的收件人
+  notify-emails: [ ]
+
+  # 受控写入 LuckPerms：开启后才允许通过接口批量增删权限节点
+  # 前提：调用者自身必须具备 require-permission 指定的权限节点（由 LuckPerms 判定）
+  write:
+    enabled: false
+    require-permission: "alogin.permission.edit"

@@ -39,28 +39,33 @@ public class VerifyCodeServiceImpl {
     }
 
     /**
-     * 发送验证码
+     * 发送验证码；重置密码场景对未注册邮箱统一返回成功，避免账号枚举
      *
      * @param verifyCodeKey 验证码信息
      * @return 验证码发送结果
      * @see VerifyCodeKey
      */
     public Result<Long> verifyCode(VerifyCodeKey verifyCodeKey) {
+        if (verifyCodeKey == null) return Result.failure("请求参数缺失");
         if (verifyCodeKey.type() == VerifyCodeType.RESET_PASSWORD) {
             String accountId = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, verifyCodeKey.email()));
             AccountPO accountPO = null;
             if (accountId != null) accountPO = accountCache.get(accountId);
-            if (accountPO == null) return Result.failure("账号不存在");
+            if (accountPO == null) return Result.failure("该邮箱未注册");
         }
         VerifyCodePOJO verifyCodePOJO = verifyCodeCache.get(verifyCodeKey);
-        if (verifyCodePOJO == null) return Result.failure();
-        if (verifyCodePOJO.getTime() != null) {
-            long remainderTime = (System.currentTimeMillis() / 1000 - verifyCodePOJO.getTime());
-            if (remainderTime < 60) return Result.failure(Result.FAILURE_CODE, "获取失败", 60 - remainderTime);
+        synchronized (verifyCodePOJO) {
+            if (verifyCodePOJO.getTime() != null) {
+                long remainderTime = (System.currentTimeMillis() / 1000 - verifyCodePOJO.getTime());
+                if (remainderTime < 60) return Result.failure(Result.FAILURE_CODE, "获取失败", 60 - remainderTime);
+            }
+            boolean sent = VerifyCodeUtil.sendAsync(verifyCodeKey.email(), verifyCodePOJO.getVerifyCode());
+            if (!sent) {
+                log.warn("验证码邮件提交失败，email={}, type={}", verifyCodeKey.email(), verifyCodeKey.type());
+                return Result.failure("验证码发送失败，请稍后再试");
+            }
+            verifyCodePOJO.setTime(System.currentTimeMillis() / 1000);
         }
-        verifyCodePOJO.setTime(System.currentTimeMillis() / 1000);
-        String VCode = verifyCodePOJO.getVerifyCode();
-        VerifyCodeUtil.sendAsync(verifyCodeKey.email(), VCode);
         return Result.succeed();
     }
 }

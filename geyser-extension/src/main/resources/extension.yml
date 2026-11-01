@@ -1,0 +1,7 @@
+id: alogin-transfer
+name: ALoginTransfer
+main: xyz.apleax.ALogin.Geyser.ALoginTransferExtension
+api: 2.9.0
+version: ${revision}
+authors:
+  - Apleax

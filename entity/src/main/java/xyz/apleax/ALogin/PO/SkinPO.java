@@ -1,12 +1,14 @@
 package xyz.apleax.ALogin.PO;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.ibatis.type.BlobTypeHandler;
+import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 
 import java.util.UUID;
 
@@ -20,20 +22,30 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SkinPO {
+    /**
+     * 雪花主键（与表结构无 AUTO_INCREMENT 匹配，见 SQL 模板）
+     */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /**
      * 服务器内uuid
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = UuidTypeHandler.class)
     private UUID mcUuid;
     /**
      * 皮肤数据
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = UuidTypeHandler.class)
     private UUID skinUuid;
     /**
      * 皮肤文件
      */
     @TableField(typeHandler = BlobTypeHandler.class)
     private byte[] skinImg;
+    /**
+     * 头像贴图缓存：16×8 PNG（左 8×8 头部正面 + 右 8×8 帽子层正面），由 {@link #skinImg} 生成；
+     * 为空时读路径现场生成（见 AvatarRenderer）
+     */
+    @TableField(typeHandler = BlobTypeHandler.class)
+    private byte[] avatar;
 }
