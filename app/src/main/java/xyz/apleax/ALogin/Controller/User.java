@@ -12,10 +12,14 @@ import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
 import xyz.apleax.ALogin.Config.AvatarConfig;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.Service.Remote.UserService;
 import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
+import xyz.apleax.ALogin.Util.ApiResults;
 import xyz.apleax.ALogin.Util.AvatarRenderer;
+import xyz.apleax.ALogin.Util.ErrorUtils;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
@@ -34,15 +38,16 @@ public class User {
     @Mapping(path = "/GetUserInfo", method = MethodType.GET,
             name = "获取用户信息", description = "获取用户信息接口，用于获取用户信息")
     public Result<UserInfoVO> GetUserInfo() {
-        return userService.getUserInfo();
+        return ApiResults.ok(userService.getUserInfo());
     }
 
     @Mapping(path = "/UploadSkin", method = MethodType.POST,
             name = "上传皮肤", description = "上传皮肤接口，用于更改皮肤")
     public Result<Boolean> UploadSkin(UploadedFile skin, String variant) {
         if (skin == null || skin.getContent() == null || variant == null || variant.isEmpty())
-            return Result.failure("更新皮肤失败", false);
-        return userService.uploadSkin(skin, variant);
+            throw ApiException.of(ErrorCode.SKIN_REQUEST_INVALID);
+        userService.uploadSkin(skin, variant);
+        return ApiResults.ok(true, "皮肤上传成功，正在处理中");
     }
 
     @SaIgnore
@@ -50,11 +55,11 @@ public class User {
             name = "获取玩家头像", description = "按 mcUuid 返回玩家头像 PNG；size(1-512)、overlay(true/false，是否绘制帽子层，缺省 false)")
     public void Avatar(String uuid, String size, String overlay, Context ctx) throws Throwable {
         if (uuid == null || uuid.isBlank()) {
-            badRequest(ctx, "uuid 不能为空");
+            badRequest(ctx, ErrorCode.AVATAR_UUID_MISSING);
             return;
         }
         if (UuidTypeHandler.parse(uuid) == null) {
-            badRequest(ctx, "uuid 格式非法");
+            badRequest(ctx, ErrorCode.AVATAR_UUID_INVALID);
             return;
         }
         int side = AvatarRenderer.DEFAULT_SIZE;
@@ -62,7 +67,7 @@ public class User {
             try {
                 side = AvatarRenderer.clampSize(Integer.parseInt(size.trim()));
             } catch (NumberFormatException e) {
-                badRequest(ctx, "size 必须是 " + AvatarRenderer.MIN_SIZE + "-" + AvatarRenderer.MAX_SIZE + " 的整数");
+                badRequest(ctx, ErrorCode.AVATAR_SIZE_INVALID);
                 return;
             }
         }
@@ -72,7 +77,7 @@ public class User {
             String value = overlay.trim();
             if ("true".equalsIgnoreCase(value)) withOverlay = true;
             else if (!"false".equalsIgnoreCase(value)) {
-                badRequest(ctx, "overlay 只支持 true 或 false");
+                badRequest(ctx, ErrorCode.AVATAR_OVERLAY_INVALID);
                 return;
             }
         }
@@ -84,17 +89,18 @@ public class User {
         ctx.output(png);
     }
 
-    private static void badRequest(Context ctx, String message) throws Throwable {
+    private static void badRequest(Context ctx, ErrorCode code) throws Throwable {
         ctx.status(400);
-        ctx.render(Result.failure(message));
+        ctx.render(ApiResults.failure(code));
     }
 
     @Transaction
     @Mapping(path = "/ChangeNickName", method = MethodType.PUT,
             name = "修改昵称", description = "修改昵称接口，用于修改昵称")
     public Result<Boolean> ChangeNickName(String nickname) {
-        if (nickname == null || nickname.isEmpty()) return Result.failure("昵称不能为空", false);
-        return userService.changeNickName(nickname);
+        if (nickname == null || nickname.isEmpty()) throw ApiException.of(ErrorCode.NICKNAME_EMPTY);
+        userService.changeNickName(nickname);
+        return ApiResults.ok(true);
     }
 
     /**
@@ -103,16 +109,23 @@ public class User {
     @SaIgnore
     @Mapping(path = "/GameProfile", method = MethodType.POST,
             name = "校验Token", description = "校验Token并获取玩家配置")
-    public GameProfile GameProfile(String token, String uuid, String playerIp, Context ctx) {
+    public GameProfile GameProfile(String token, String uuid, String playerIp, Context ctx) throws Throwable {
         if (token != null && uuid != null) {
             ctx.status(400);
-            return null;
+            throw ApiException.of(ErrorCode.PARAM_INVALID);
         }
-        GameProfile profile = null;
-        if (token != null && !token.isBlank()) profile = userService.GameProfile(token, "", playerIp);
-        else if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid, playerIp);
-        if (profile == null) ctx.status(400);
-        else ctx.status(200);
-        return profile;
+        try {
+            GameProfile profile = null;
+            if (token != null && !token.isBlank()) profile = userService.GameProfile(token, "", playerIp);
+            else if (uuid != null && !uuid.isBlank()) profile = userService.GameProfile("", uuid, playerIp);
+            if (profile == null) {
+                ctx.status(400);
+                throw ApiException.of(ErrorCode.PROFILE_NOT_FOUND);
+            }
+            return profile;
+        } catch (Throwable e) {
+            if (ErrorUtils.findApiException(e) != null) ctx.status(400);
+            throw e;
+        }
     }
 }

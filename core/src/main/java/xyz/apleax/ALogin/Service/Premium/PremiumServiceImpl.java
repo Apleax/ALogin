@@ -15,10 +15,11 @@ import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.LoginDevice;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
@@ -78,7 +79,7 @@ public class PremiumServiceImpl implements LifecycleBean {
     /**
      * 发起绑定正版账号的设备码授权（需网页已登录）
      */
-    public Result<PremiumDeviceCode> getBindCode() {
+    public PremiumDeviceCode getBindCode() {
         return startFlow("bind", StpUtil.getLoginIdAsString(), null, null);
     }
 
@@ -88,17 +89,17 @@ public class PremiumServiceImpl implements LifecycleBean {
      * @param token  进服会话临时 token
      * @param realIp 来源 IP
      */
-    public Result<PremiumDeviceCode> getLoginCode(String token, String realIp) {
+    public PremiumDeviceCode getLoginCode(String token, String realIp) {
         if (token == null || token.isBlank() || SaTempUtil.parseToken(token, UUID.class) == null)
-            return Result.failure("会话已过期，请重新进入服务器");
+            throw ApiException.of(ErrorCode.GAME_TOKEN_INVALID);
         return startFlow("login", null, token, realIp);
     }
 
     /**
      * 已绑定正版 UUID 名单（换行分隔）
      */
-    public Result<String> getBoundUuids(String key) {
-        if (!assertionService.matchesSharedKey(key)) return Result.failure("密钥校验失败");
+    public String getBoundUuids(String key) {
+        if (!assertionService.matchesSharedKey(key)) throw ApiException.of(ErrorCode.CLIENT_KEY_MISMATCH);
         List<AccountPO> accounts = accountService.list(new LambdaQueryWrapper<AccountPO>()
                 .select(AccountPO::getPremiumUuid)
                 .isNotNull(AccountPO::getPremiumUuid));
@@ -110,25 +111,23 @@ public class PremiumServiceImpl implements LifecycleBean {
                 .filter(Objects::nonNull)
                 .map(UUID::toString)
                 .collect(Collectors.joining("\n"));
-        return Result.succeed(joined);
+        return joined;
     }
 
     /**
      * 查询授权流程状态（前端轮询用）
      */
-    public Result<PremiumFlowStatus> getStatus(String flowKey) {
+    public PremiumFlowStatus getStatus(String flowKey) {
         Flow flow = FLOWS.getIfPresent(flowKey);
-        if (flow == null) return Result.failure("授权会话不存在或已过期，请重新发起");
-        return Result.succeed(new PremiumFlowStatus(flow.status, flow.message, flow.name));
+        if (flow == null) throw ApiException.of(ErrorCode.FLOW_NOT_FOUND);
+        return new PremiumFlowStatus(flow.status, flow.message, flow.name, flow.code);
     }
 
     /**
      * 发起一次设备码授权
      */
-    private Result<PremiumDeviceCode> startFlow(String type, String account, String gameToken, String realIp) {
-        Result<PremiumOAuthService.DeviceCode> started = oauthService.startDeviceCode();
-        if (started.getCode() != Result.SUCCEED_CODE) return Result.failure(started.getDescription());
-        PremiumOAuthService.DeviceCode deviceCode = started.getData();
+    private PremiumDeviceCode startFlow(String type, String account, String gameToken, String realIp) {
+        PremiumOAuthService.DeviceCode deviceCode = oauthService.startDeviceCode();
 
         String flowKey = RandomStringUtils.generateLowerUpper(32);
         Flow flow = new Flow(type, account, gameToken, realIp, deviceCode.deviceCode());
@@ -136,15 +135,17 @@ public class PremiumServiceImpl implements LifecycleBean {
         flowExecutor.submit(() -> {
             try {
                 pollUntilDone(flow, deviceCode);
+            } catch (ApiException e) {
+                flow.fail(e);
             } catch (Exception e) {
                 log.error("设备码轮询异常，type={}, flowKey={}", type, flowKey, e);
-                flow.fail("授权服务异常，请重试");
+                flow.fail(ErrorCode.PREMIUM_FLOW_FAILED);
             }
         });
         log.info("已发起正版设备码授权，type={}, account={}, 有效期={}秒",
                 type, account, deviceCode.expiresInSeconds());
-        return Result.succeed(new PremiumDeviceCode(flowKey, deviceCode.userCode(),
-                deviceCode.verificationUri(), deviceCode.expiresInSeconds()));
+        return new PremiumDeviceCode(flowKey, deviceCode.userCode(),
+                deviceCode.verificationUri(), deviceCode.expiresInSeconds());
     }
 
     @SuppressWarnings("BusyWait")
@@ -161,7 +162,7 @@ public class PremiumServiceImpl implements LifecycleBean {
                     return;
                 }
                 case FAILED -> {
-                    flow.fail(polled.userMessage());
+                    flow.fail(polled.errorCode());
                     return;
                 }
             }
@@ -171,28 +172,29 @@ public class PremiumServiceImpl implements LifecycleBean {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 // 轮询被中断（应用关闭等）：流程不能停在 pending，否则前端会一直轮询到 20 分钟后才报"会话不存在"
-                if (PremiumFlowStatus.PENDING.equals(flow.status)) flow.fail("授权已取消，请重新发起");
+                if (PremiumFlowStatus.PENDING.equals(flow.status)) flow.fail(ErrorCode.PREMIUM_FLOW_CANCELLED);
                 return;
             }
         }
-        if (PremiumFlowStatus.PENDING.equals(flow.status)) flow.fail("授权超时，请重新发起");
+        if (PremiumFlowStatus.PENDING.equals(flow.status)) flow.fail(ErrorCode.PREMIUM_FLOW_TIMEOUT);
     }
 
     /**
      * 授权成功后的收尾
      */
     private void complete(Flow flow, String microsoftToken) {
-        Result<PremiumProfile> resolved = oauthService.resolveProfile(microsoftToken);
-        if (resolved.getCode() != Result.SUCCEED_CODE) {
-            flow.fail(resolved.getDescription());
+        PremiumProfile profile;
+        try {
+            profile = oauthService.resolveProfile(microsoftToken);
+        } catch (ApiException e) {
+            flow.fail(e);
             return;
         }
-        PremiumProfile profile = resolved.getData();
-        Result<PremiumProfile> done = "bind".equals(flow.type)
-                ? bind(flow.account, profile)
-                : login(flow.gameToken, profile, flow.realIp);
-        if (done.getCode() != Result.SUCCEED_CODE) {
-            flow.fail(done.getDescription());
+        try {
+            if ("bind".equals(flow.type)) bind(flow.account, profile);
+            else login(flow.gameToken, profile, flow.realIp);
+        } catch (ApiException e) {
+            flow.fail(e);
             return;
         }
         flow.succeed(profile.name());
@@ -201,13 +203,13 @@ public class PremiumServiceImpl implements LifecycleBean {
     /**
      * 绑定：把正版 UUID 写入账号（幂等；已被其他账号绑定则拒绝）
      */
-    public Result<PremiumProfile> bind(String account, PremiumProfile profile) {
+    public PremiumProfile bind(String account, PremiumProfile profile) {
         AccountIndexCache key = new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString());
         String boundAccount = accountIndexCache.get(key);
         if (boundAccount != null && !boundAccount.equals(account))
-            return Result.failure("该正版账号已绑定到其他账号，如需更换请先解绑");
+            throw ApiException.of(ErrorCode.PREMIUM_TAKEN);
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.failure("账号不存在");
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         UUID previousUuid = accountPO.getPremiumUuid();
         if (profile.uuid().equals(previousUuid)) {
             if (!Objects.equals(profile.name(), accountPO.getPremiumName()))
@@ -215,7 +217,7 @@ public class PremiumServiceImpl implements LifecycleBean {
                     log.debug("正版账号重复绑定（幂等），补写正版名称，account={}, name={}", account, profile.name());
                 else log.warn("正版账号重复绑定（幂等），正版名称补写失败，account={}", account);
             else log.info("正版账号重复绑定（幂等），account={}, premiumUuid={}", account, profile.uuid());
-            return Result.succeed(profile);
+            return profile;
         }
         boolean updated;
         try {
@@ -228,11 +230,11 @@ public class PremiumServiceImpl implements LifecycleBean {
             updated = accountService.update(update);
         } catch (RuntimeException e) {
             log.error("绑定正版 UUID 异常，account={}, premiumUuid={}", account, profile.uuid(), e);
-            return Result.failure("绑定失败，请稍后再试或联系管理员");
+            throw ApiException.of(ErrorCode.BIND_FAILED_HINT);
         }
         if (!updated) {
             log.error("绑定正版 UUID 失败，account={}", account);
-            return Result.failure("绑定失败，请稍后再试");
+            throw ApiException.of(ErrorCode.BIND_FAILED);
         }
         accountCache.invalidate(account);
         accountIndexCache.invalidate(key);
@@ -240,7 +242,7 @@ public class PremiumServiceImpl implements LifecycleBean {
             accountIndexCache.invalidate(new AccountIndexCache(AccountType.PREMIUM_UUID, previousUuid.toString()));
         log.info("正版绑定成功，account={}, premiumUuid={}, previousPremiumUuid={}, name={}",
                 account, profile.uuid(), previousUuid, profile.name());
-        return Result.succeed(profile);
+        return profile;
     }
 
     /**
@@ -263,13 +265,13 @@ public class PremiumServiceImpl implements LifecycleBean {
     /**
      * 一键登录：按正版 UUID 找到账号并通知登录服放行
      */
-    private Result<PremiumProfile> login(String token, PremiumProfile profile, String realIp) {
-        if (!ClientIp.isValid(realIp)) return Result.failure("无法获取客户端 IP，请稍后再试");
+    private PremiumProfile login(String token, PremiumProfile profile, String realIp) {
+        if (!ClientIp.isValid(realIp)) throw ApiException.of(ErrorCode.IP_UNAVAILABLE);
         String account = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
-        if (account == null) return Result.failure("该正版账号尚未绑定 ALogin 账号，请先在网页登录后绑定");
+        if (account == null) throw ApiException.of(ErrorCode.PREMIUM_NOT_BOUND_HINT);
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.failure("账号不存在");
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         return completeLogin(account, accountPO, realIp, token, profile);
     }
 
@@ -279,19 +281,19 @@ public class PremiumServiceImpl implements LifecycleBean {
      * @param token 本次进服会话的临时 token（登录服 spawn 阶段已生成，LoginEvent 靠它定位玩家）。
      *              复用同一个而不是新建一个：一次进服只留一个可重放凭证，且与网页兜底链接同源
      */
-    public Result<PremiumProfile> autoLogin(String account, String token, PremiumProfile profile, String realIp) {
+    public PremiumProfile autoLogin(String account, String token, PremiumProfile profile, String realIp) {
         if (token == null || token.isBlank()) {
             log.warn("正版自动登录被拒：缺少进服临时 token，account={}", account);
-            return Result.failure("登录凭证缺失，请重新进入服务器");
+            throw ApiException.of(ErrorCode.LOGIN_CREDENTIAL_MISSING);
         }
         String boundAccount = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, profile.uuid().toString()));
         if (account == null || !account.equals(boundAccount)) {
             log.warn("正版自动登录被拒：绑定关系不匹配，account={}, premiumUuid={}", account, profile.uuid());
-            return Result.failure("该正版账号尚未绑定 ALogin 账号");
+            throw ApiException.of(ErrorCode.PREMIUM_NOT_BOUND);
         }
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.failure("账号不存在");
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         log.info("正版自动登录，account={}, premiumUuid={}, name={}, ip={}",
                 account, profile.uuid(), profile.name(), realIp);
         return completeLogin(account, accountPO, realIp, token, profile);
@@ -301,8 +303,8 @@ public class PremiumServiceImpl implements LifecycleBean {
      * 正版登录收尾：记录 IP/名称、置登录态并触发 LoginEvent 放行。
      * 在轮询线程执行时无 sa-token 上下文，统一使用 mock 上下文。
      */
-    private Result<PremiumProfile> completeLogin(String account, AccountPO accountPO, String realIp,
-                                                 String token, PremiumProfile profile) {
+    private PremiumProfile completeLogin(String account, AccountPO accountPO, String realIp,
+                                         String token, PremiumProfile profile) {
         SaTokenContextMockUtil.setMockContext();
         try {
             if (!Objects.equals(profile.name(), accountPO.getPremiumName())
@@ -314,7 +316,7 @@ public class PremiumServiceImpl implements LifecycleBean {
                         .eq(AccountPO::getAccount, account));
                 if (!updated) {
                     log.error("更新最后登录 IP 失败，拒绝正版登录，account={}", account);
-                    return Result.failure("登录失败，请稍后再试");
+                    throw ApiException.of(ErrorCode.LOGIN_PERSIST_FAILED);
                 }
                 accountCache.invalidate(account);
             }
@@ -322,7 +324,7 @@ public class PremiumServiceImpl implements LifecycleBean {
             StpUtil.getTokenSession().set("loginMethod", AccountType.PREMIUM_UUID.getKey());
             Dami.bus().send("LoginEvent", loginEventPayload(account, token, StpUtil.getTokenValue()));
             log.info("正版登录成功，account={}, premiumUuid={}, name={}", account, profile.uuid(), profile.name());
-            return Result.succeed(profile);
+            return profile;
         } finally {
             SaTokenContextMockUtil.clearContext();
         }
@@ -357,6 +359,10 @@ public class PremiumServiceImpl implements LifecycleBean {
         private volatile String status = PremiumFlowStatus.PENDING;
         private volatile String message;
         private volatile String name;
+        /**
+         * 业务码，成功/等待为 200
+         */
+        private volatile Integer code = 200;
 
         private Flow(String type, String account, String gameToken, String realIp, String deviceCode) {
             this.type = type;
@@ -368,11 +374,19 @@ public class PremiumServiceImpl implements LifecycleBean {
 
         private void succeed(String name) {
             this.name = name;
+            this.code = 200;
             this.status = PremiumFlowStatus.SUCCESS;
         }
 
-        private void fail(String message) {
-            this.message = message == null || message.isBlank() ? "授权失败，请重试" : message;
+        private void fail(ErrorCode code) {
+            this.code = code.code();
+            this.message = code.message();
+            this.status = PremiumFlowStatus.ERROR;
+        }
+
+        private void fail(ApiException e) {
+            this.code = e.errorCode().code();
+            this.message = e.description();
             this.status = PremiumFlowStatus.ERROR;
         }
     }

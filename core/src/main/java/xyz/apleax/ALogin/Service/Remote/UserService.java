@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.Service.Remote;
 
 import org.noear.dami2.solon.annotation.DamiTopic;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
 import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.VO.UserInfoVO;
@@ -16,7 +15,7 @@ public interface UserService {
     /**
      * 当前登录用户信息
      */
-    Result<UserInfoVO> getUserInfo();
+    UserInfoVO getUserInfo();
 
     /**
      * 上传皮肤
@@ -24,14 +23,14 @@ public interface UserService {
      * @param skin    皮肤文件
      * @param variant 皮肤类型（SLIM/CLASSIC）
      */
-    Result<Boolean> uploadSkin(UploadedFile skin, String variant);
+    boolean uploadSkin(UploadedFile skin, String variant);
 
     /**
      * 修改昵称
      *
      * @param nickname 新昵称
      */
-    Result<Boolean> changeNickName(String nickname);
+    void changeNickName(String nickname);
 
     /**
      * 渲染玩家头像（头部正面，可选叠加帽子层）

@@ -5,6 +5,7 @@ import org.noear.dami2.bus.Event;
 import org.noear.dami2.bus.EventListener;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.Error.ApiException;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 
 import java.util.Map;
@@ -31,6 +32,8 @@ public class PremiumBindListener implements EventListener<Map<String, String>> {
         try {
             premiumService.bind(map.get("account"), new PremiumProfile(
                     UUID.fromString(map.get("premiumUuid")), map.getOrDefault("premiumName", "")));
+        } catch (ApiException e) {
+            log.warn("登录后正版绑定处理失败，code={}, message={}", e.errorCode().code(), e.description());
         } catch (Exception e) {
             log.warn("登录后正版绑定处理失败", e);
         }

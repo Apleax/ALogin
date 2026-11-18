@@ -5,6 +5,7 @@ import org.noear.dami2.bus.Event;
 import org.noear.dami2.bus.EventListener;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Managed;
+import xyz.apleax.ALogin.Error.ApiException;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 
 import java.util.Map;
@@ -34,6 +35,8 @@ public class PremiumAutoLoginListener implements EventListener<Map<String, Strin
                     new PremiumProfile(UUID.fromString(map.get("premiumUuid")),
                             map.getOrDefault("premiumName", "")),
                     emptyToNull(map.get("ip")));
+        } catch (ApiException e) {
+            log.warn("正版自动登录处理失败，code={}, message={}", e.errorCode().code(), e.description());
         } catch (Exception e) {
             log.warn("正版自动登录处理失败", e);
         }

@@ -10,9 +10,10 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 
@@ -46,16 +47,16 @@ public class ChangeNickNameServiceImpl {
      * 修改昵称；并发撞唯一索引时返回友好提示（exists 检查与 update 之间存在竞态窗口）
      */
     @Transaction
-    public Result<Boolean> changeNickName(String nickname) {
+    public void changeNickName(String nickname) {
         String account = StpUtil.getLoginIdAsString();
-        if (account == null) return Result.succeed(false);
+        if (account == null) throw ApiException.of(ErrorCode.NOT_LOGIN);
         if (nickname == null || !NICKNAME_PATTERN.matcher(nickname).matches())
-            return Result.failure("用户名只能包含英文字母、数字和下划线，长度需为3-16个字符", false);
+            throw ApiException.of(ErrorCode.NICKNAME_INVALID);
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.succeed(false);
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
 
         String oldNickName = accountPO.getNickName();
-        if (nickname.equals(oldNickName)) return Result.succeed(true);
+        if (nickname.equals(oldNickName)) return;
 
         long now = System.currentTimeMillis();
 
@@ -70,7 +71,7 @@ public class ChangeNickNameServiceImpl {
             long interval = now - latestAbandonTime;
             if (interval < CHANGE_NICK_NAME_INTERVAL_MILLIS) {
                 long remainDays = ceilDays(CHANGE_NICK_NAME_INTERVAL_MILLIS - interval);
-                return Result.failure(remainDays + "日后可以再次使用该昵称", false);
+                throw ApiException.of(ErrorCode.NICKNAME_REUSE_COOLDOWN, remainDays);
             }
         }
 
@@ -79,7 +80,7 @@ public class ChangeNickNameServiceImpl {
             long interval = now - selfLastChange;
             if (interval < CHANGE_NICK_NAME_INTERVAL_MILLIS) {
                 long remainDays = ceilDays(CHANGE_NICK_NAME_INTERVAL_MILLIS - interval);
-                return Result.failure(remainDays + "日后可以再次更改昵称", false);
+                throw ApiException.of(ErrorCode.NICKNAME_CHANGE_COOLDOWN, remainDays);
             }
         }
 
@@ -88,7 +89,7 @@ public class ChangeNickNameServiceImpl {
                 .ne(AccountPO::getAccount, account));
         if (isNicknameUsed) {
             log.debug("用户名 [{}] 已被使用，用户: {}", nickname, account);
-            return Result.failure("该用户名已被使用，请更换其他用户名", false);
+            throw ApiException.of(ErrorCode.NICKNAME_TAKEN);
         }
 
         boolean updated;
@@ -101,11 +102,11 @@ public class ChangeNickNameServiceImpl {
         } catch (RuntimeException e) {
             if (isDuplicateKey(e)) {
                 log.debug("用户名 [{}] 并发占用冲突，用户: {}", nickname, account);
-                return Result.failure("该用户名已被使用，请更换其他用户名", false);
+                throw ApiException.of(ErrorCode.NICKNAME_TAKEN);
             }
             throw e;
         }
-        if (!updated) return Result.succeed(false);
+        if (!updated) throw ApiException.of(ErrorCode.UPDATE_FAILED);
 
         accountService.update(new LambdaUpdateWrapper<AccountPO>()
                 .eq(AccountPO::getPreviousName, nickname)
@@ -114,7 +115,6 @@ public class ChangeNickNameServiceImpl {
         
         accountCache.invalidate(account);
         log.debug("修改用户名成功，用户: {}，{} to {}", account, oldNickName, nickname);
-        return Result.succeed(true);
     }
 
     /**
