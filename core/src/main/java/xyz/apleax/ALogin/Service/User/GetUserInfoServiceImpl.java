@@ -35,6 +35,7 @@ public class GetUserInfoServiceImpl {
         if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         return new UserInfoVO(accountPO.getAccount(), accountPO.getNickName(), accountPO.getAvatar(),
                 accountPO.getPremiumUuid() == null ? null : accountPO.getPremiumUuid().toString(),
-                accountPO.getPremiumName());
+                accountPO.getPremiumName(),
+                accountPO.getBedrockXuid(), accountPO.getBedrockName());
     }
 }
