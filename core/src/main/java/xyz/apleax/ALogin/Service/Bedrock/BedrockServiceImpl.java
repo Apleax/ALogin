@@ -108,6 +108,36 @@ public class BedrockServiceImpl {
     }
 
     /**
+     * 解除当前登录账号的基岩版绑定
+     * <p>
+     * 用 {@link LambdaUpdateWrapper#set} 显式写 null：{@code updateById} 会忽略 null 字段，无法把列清空。
+     */
+    public void unbindBedrock() {
+        String account = StpUtil.getLoginIdAsString();
+        AccountPO accountPO = accountCache.get(account);
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
+        String previousXuid = accountPO.getBedrockXuid();
+        if (previousXuid == null) throw ApiException.of(ErrorCode.BEDROCK_BIND_NOT_FOUND);
+        boolean updated;
+        try {
+            updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+                    .set(AccountPO::getBedrockXuid, null)
+                    .set(AccountPO::getBedrockName, null)
+                    .eq(AccountPO::getAccount, account));
+        } catch (RuntimeException e) {
+            log.error("解绑基岩版 XUID 异常，account={}, xuid={}", account, previousXuid, e);
+            throw ApiException.of(ErrorCode.UPDATE_FAILED);
+        }
+        if (!updated) {
+            log.error("解绑基岩版 XUID 失败，account={}", account);
+            throw ApiException.of(ErrorCode.UPDATE_FAILED);
+        }
+        accountCache.invalidate(account);
+        accountIndexCache.invalidate(new AccountIndexCache(AccountType.BEDROCK_XUID, previousXuid));
+        log.info("基岩版解绑成功，account={}, xuid={}", account, previousXuid);
+    }
+
+    /**
      * 同步基岩版展示名称（仅用于展示）
      */
     private void updateBedrockName(String account, String name) {

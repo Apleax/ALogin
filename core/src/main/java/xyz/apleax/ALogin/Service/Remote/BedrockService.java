@@ -28,4 +28,9 @@ public interface BedrockService {
      * @param name  基岩版游戏名（可为空）
      */
     void bind(String key, String token, String xuid, String name);
+
+    /**
+     * 解除当前登录账号的基岩版绑定
+     */
+    void unbindBedrock();
 }

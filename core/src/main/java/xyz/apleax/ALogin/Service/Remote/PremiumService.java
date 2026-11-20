@@ -37,4 +37,9 @@ public interface PremiumService {
      * @param key 共享密钥（须与 Premium.assertion.secret 一致）
      */
     String getBoundUuids(String key);
+
+    /**
+     * 解除当前登录账号的正版（Java）绑定
+     */
+    void unbindPremium();
 }

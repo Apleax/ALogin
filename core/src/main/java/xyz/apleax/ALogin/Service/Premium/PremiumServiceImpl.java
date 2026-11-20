@@ -246,6 +246,36 @@ public class PremiumServiceImpl implements LifecycleBean {
     }
 
     /**
+     * 解除当前登录账号的正版（Java）绑定
+     * <p>
+     * 用 {@link LambdaUpdateWrapper#set} 显式写 null：{@code updateById} 会忽略 null 字段，无法把列清空。
+     */
+    public void unbindPremium() {
+        String account = StpUtil.getLoginIdAsString();
+        AccountPO accountPO = accountCache.get(account);
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
+        UUID previousUuid = accountPO.getPremiumUuid();
+        if (previousUuid == null) throw ApiException.of(ErrorCode.PREMIUM_BIND_NOT_FOUND);
+        boolean updated;
+        try {
+            updated = accountService.update(new LambdaUpdateWrapper<AccountPO>()
+                    .set(AccountPO::getPremiumUuid, null)
+                    .set(AccountPO::getPremiumName, null)
+                    .eq(AccountPO::getAccount, account));
+        } catch (RuntimeException e) {
+            log.error("解绑正版 UUID 异常，account={}, premiumUuid={}", account, previousUuid, e);
+            throw ApiException.of(ErrorCode.UPDATE_FAILED);
+        }
+        if (!updated) {
+            log.error("解绑正版 UUID 失败，account={}", account);
+            throw ApiException.of(ErrorCode.UPDATE_FAILED);
+        }
+        accountCache.invalidate(account);
+        accountIndexCache.invalidate(new AccountIndexCache(AccountType.PREMIUM_UUID, previousUuid.toString()));
+        log.info("正版解绑成功，account={}, premiumUuid={}", account, previousUuid);
+    }
+
+    /**
      * 同步正版名称（仅用于展示）
      */
     private boolean updatePremiumName(String account, String name) {
