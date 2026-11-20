@@ -40,4 +40,3 @@ replay_pid*.log
 *.class
 
 /docs/
-/core/src/test/
