@@ -14,10 +14,14 @@ import xyz.apleax.ALogin.Service.User.ChangeNickNameServiceImpl;
 import xyz.apleax.ALogin.Service.User.GameProfileServiceImpl;
 import xyz.apleax.ALogin.Service.User.GetUserInfoServiceImpl;
 import xyz.apleax.ALogin.Service.User.UploadSkinServiceImpl;
+import xyz.apleax.ALogin.Service.User.UserConfigServiceImpl;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +37,8 @@ class DamiTopicContractTest {
             BedrockService.class, List.of(BedrockServiceImpl.class),
             PremiumService.class, List.of(PremiumServiceImpl.class),
             UserService.class, List.of(GetUserInfoServiceImpl.class, UploadSkinServiceImpl.class,
-                    ChangeNickNameServiceImpl.class, GameProfileServiceImpl.class, AvatarServiceImpl.class));
+                    ChangeNickNameServiceImpl.class, GameProfileServiceImpl.class, AvatarServiceImpl.class,
+                    UserConfigServiceImpl.class));
 
     @Test
     void implTopicsMatchInterface() {
@@ -92,6 +97,31 @@ class DamiTopicContractTest {
                 }
                 assertTrue(matched, entry.getKey().getSimpleName() + "#" + method.getName()
                         + " 没有任何实现类提供同名同参方法");
+            }
+        }
+    }
+
+    /**
+     * Dami 提供方类不得存在同名 public 重载。
+     * <p>
+     * Dami2 按"主题 + 方法名"派发，同名重载会让提供方挑到参数不匹配的那个方法，运行期抛
+     * {@code IllegalArgumentException: argument type mismatch}（已实测发生）。编译器不报错，
+     * 上面两条断言也只按"方法名+参数"精确匹配，同样发现不了重载歧义，因此单独兜底。
+     */
+    @Test
+    void implsHaveNoPublicOverloads() {
+        for (List<Class<?>> impls : CONTRACT.values()) {
+            for (Class<?> impl : impls) {
+                TreeSet<String> duplicated = new TreeSet<>();
+                Arrays.stream(impl.getDeclaredMethods())
+                        .filter(m -> Modifier.isPublic(m.getModifiers()))
+                        .collect(java.util.stream.Collectors.groupingBy(Method::getName,
+                                java.util.stream.Collectors.counting()))
+                        .forEach((name, count) -> {
+                            if (count > 1) duplicated.add(name);
+                        });
+                assertTrue(duplicated.isEmpty(),
+                        impl.getSimpleName() + " 存在同名 public 重载，Dami2 按方法名派发会挑错方法: " + duplicated);
             }
         }
     }

@@ -11,10 +11,12 @@ import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.PO.AccountPO;
+import xyz.apleax.ALogin.PO.UserConfigPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.POJO.VerifyCodePOJO;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.SQL.Service.IUserConfigService;
 import xyz.apleax.ALogin.Service.User.AvatarDefaultProvider;
 import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
@@ -29,7 +31,8 @@ import java.time.Duration;
  */
 @Slf4j
 @Configuration
-public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) implements LifecycleBean {
+public record CaffeineConfig(@Ds("DataBase") IAccountService accountService,
+                             @Ds("DataBase") IUserConfigService userConfigService) implements LifecycleBean {
     private static final String CACHE_REMOVED_SIMPLE = "键 {} 被移除，原因：{}";
 
     private static void onRemoval(Object key, Object value, RemovalCause cause) {
@@ -92,6 +95,24 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService) imp
                     }
                     AccountPO accountPO = accountService.getOne(queryWrapper);
                     return accountPO == null ? null : accountPO.getAccount();
+                });
+    }
+
+    // 用户配置缓存：无行时返回默认对象（两个开关都是开）。返回的是内存对象而不是 null，
+    // 既不写库也不会被当成"无缓存"反复回源；默认值语义只在 UserConfigServiceImpl 里解释
+    @Managed(name = "UserConfigCache", index = -100)
+    public LoadingCache<@NotNull String, UserConfigPO> UserConfigCache() {
+        return Caffeine.newBuilder()
+                .removalListener(CaffeineConfig::onRemoval)
+                .maximumSize(10_000)
+                .initialCapacity(2000)
+                .expireAfterAccess(Duration.ofHours(12))
+                .refreshAfterWrite(Duration.ofHours(1))
+                .recordStats()
+                .build(account -> {
+                    UserConfigPO userConfig = userConfigService.getOne(new LambdaQueryWrapper<UserConfigPO>()
+                            .eq(UserConfigPO::getAccount, account));
+                    return userConfig == null ? UserConfigPO.defaults(account) : userConfig;
                 });
     }
 

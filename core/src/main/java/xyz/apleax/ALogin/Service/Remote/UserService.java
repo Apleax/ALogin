@@ -3,6 +3,7 @@ package xyz.apleax.ALogin.Service.Remote;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.core.handle.UploadedFile;
 import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.VO.UserConfigVO;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
@@ -50,4 +51,18 @@ public interface UserService {
      * @param playerIp 代理上报的真实客户端 IP（可空，仅 token 分支生效）
      */
     GameProfile GameProfile(String token, String uuid, String playerIp);
+
+    /**
+     * 当前登录用户的配置（自动登录开关等）
+     */
+    UserConfigVO getUserConfig();
+
+    /**
+     * 开关当前登录用户的自动登录
+     *
+     * @param type    绑定类型（java/bedrock 的 key）
+     * @param enabled 是否开启
+     * @return 最新配置
+     */
+    UserConfigVO setAutoLogin(String type, boolean enabled);
 }

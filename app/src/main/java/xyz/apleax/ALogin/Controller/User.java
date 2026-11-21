@@ -11,6 +11,7 @@ import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Transaction;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 import xyz.apleax.ALogin.Config.AvatarConfig;
 import xyz.apleax.ALogin.Error.ApiException;
 import xyz.apleax.ALogin.Error.ErrorCode;
@@ -20,6 +21,8 @@ import xyz.apleax.ALogin.TypeHandler.UuidTypeHandler;
 import xyz.apleax.ALogin.Util.ApiResults;
 import xyz.apleax.ALogin.Util.AvatarRenderer;
 import xyz.apleax.ALogin.Util.ErrorUtils;
+import xyz.apleax.ALogin.VO.AutoLoginVO;
+import xyz.apleax.ALogin.VO.UserConfigVO;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
@@ -39,6 +42,21 @@ public class User {
             name = "获取用户信息", description = "获取用户信息接口，用于获取用户信息")
     public Result<UserInfoVO> GetUserInfo() {
         return ApiResults.ok(userService.getUserInfo());
+    }
+
+    @Mapping(path = "/Config", method = MethodType.GET,
+            name = "获取用户配置", description = "返回当前账号的自动登录开关等个人配置")
+    public Result<UserConfigVO> Config() {
+        return ApiResults.ok(userService.getUserConfig());
+    }
+
+    @Mapping(path = "/AutoLogin", method = MethodType.POST,
+            name = "开关自动登录",
+            description = "按 type(java/bedrock) 开关当前账号的免密自动登录；关闭后进服不再自动登录，改走指令/网页登录")
+    public Result<UserConfigVO> AutoLogin(@Validated AutoLoginVO autoLoginVO) {
+        if (autoLoginVO == null) throw ApiException.of(ErrorCode.BODY_MISSING);
+        return ApiResults.ok(userService.setAutoLogin(autoLoginVO.getType(),
+                Boolean.TRUE.equals(autoLoginVO.getEnabled())));
     }
 
     @Mapping(path = "/UploadSkin", method = MethodType.POST,

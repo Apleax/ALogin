@@ -37,6 +37,7 @@ public enum ErrorCode {
     PERMISSION_WRITE_DISABLED(403003, "权限写入未开启"),
     PERMISSION_NODES_EMPTY(403004, "没有需要变更的权限节点"),
     PERMISSION_CHANGE_FAILED(403005, "权限变更失败：%s"),
+    AUTO_LOGIN_DISABLED(403006, "该账号已关闭自动登录"),
     EMAIL_NOT_REGISTERED(404001, "该邮箱未注册"),
     ACCOUNT_NOT_FOUND(404002, "账号不存在"),
     VERIFY_CODE_INVALID(404003, "验证码错误"),
