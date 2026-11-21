@@ -17,6 +17,7 @@ import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.BindType;
 import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.Error.ApiException;
 import xyz.apleax.ALogin.Error.ErrorCode;
@@ -26,6 +27,7 @@ import xyz.apleax.ALogin.POJO.PremiumDeviceCode;
 import xyz.apleax.ALogin.POJO.PremiumFlowStatus;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
+import xyz.apleax.ALogin.Service.User.UserConfigServiceImpl;
 import xyz.apleax.ALogin.Util.ClientIp;
 import xyz.apleax.ALogin.Util.RandomStringUtils;
 
@@ -58,17 +60,20 @@ public class PremiumServiceImpl implements LifecycleBean {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
     private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
+    private final UserConfigServiceImpl userConfigService;
 
     public PremiumServiceImpl(PremiumOAuthService oauthService,
                               PremiumAssertionService assertionService,
                               @Ds("DataBase") IAccountService accountService,
                               @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
-                              @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache) {
+                              @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
+                              UserConfigServiceImpl userConfigService) {
         this.oauthService = oauthService;
         this.assertionService = assertionService;
         this.accountService = accountService;
         this.accountCache = accountCache;
         this.accountIndexCache = accountIndexCache;
+        this.userConfigService = userConfigService;
     }
 
     @Override
@@ -324,6 +329,8 @@ public class PremiumServiceImpl implements LifecycleBean {
         }
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
+        if (!userConfigService.isAutoLoginEnabled(account, BindType.JAVA))
+            throw ApiException.of(ErrorCode.AUTO_LOGIN_DISABLED);
         log.info("正版自动登录，account={}, premiumUuid={}, name={}, ip={}",
                 account, profile.uuid(), profile.name(), realIp);
         return completeLogin(account, accountPO, realIp, token, profile);

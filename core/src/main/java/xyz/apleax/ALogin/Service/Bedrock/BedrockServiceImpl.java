@@ -10,6 +10,7 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.BindType;
 import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.Error.ApiException;
 import xyz.apleax.ALogin.Error.ErrorCode;
@@ -17,6 +18,7 @@ import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
 import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
+import xyz.apleax.ALogin.Service.User.UserConfigServiceImpl;
 
 import java.util.Objects;
 
@@ -33,15 +35,18 @@ public class BedrockServiceImpl {
     private final IAccountService accountService;
     private final LoadingCache<@NotNull String, AccountPO> accountCache;
     private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
+    private final UserConfigServiceImpl userConfigService;
 
     public BedrockServiceImpl(PremiumAssertionService assertionService,
                               @Ds("DataBase") IAccountService accountService,
                               @Inject("AccountCache") LoadingCache<@NotNull String, AccountPO> accountCache,
-                              @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache) {
+                              @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
+                              UserConfigServiceImpl userConfigService) {
         this.assertionService = assertionService;
         this.accountService = accountService;
         this.accountCache = accountCache;
         this.accountIndexCache = accountIndexCache;
+        this.userConfigService = userConfigService;
     }
 
     /**
@@ -54,6 +59,8 @@ public class BedrockServiceImpl {
         if (account == null) throw ApiException.of(ErrorCode.BEDROCK_NOT_BOUND);
         AccountPO accountPO = accountCache.get(account);
         if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
+        if (!userConfigService.isAutoLoginEnabled(account, BindType.BEDROCK))
+            throw ApiException.of(ErrorCode.AUTO_LOGIN_DISABLED);
         if (name != null && !name.isBlank() && !Objects.equals(name, accountPO.getBedrockName()))
             updateBedrockName(account, name);
         StpUtil.login(account, LoginDevice.BEDROCK.getKey());

@@ -23,9 +23,11 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Enum.BindType;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.PremiumAssertion;
 import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
+import xyz.apleax.ALogin.Service.User.UserConfigServiceImpl;
 
 import java.time.Duration;
 import java.util.Map;
@@ -58,11 +60,14 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
 
     private final PremiumAssertionService assertionService;
     private final LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache;
+    private final UserConfigServiceImpl userConfigService;
 
     public PlayerSpawnEventListener(PremiumAssertionService assertionService,
-                                    @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache) {
+                                    @Inject("AccountIndexCache") LoadingCache<@NotNull AccountIndexCache, String> accountIndexCache,
+                                    UserConfigServiceImpl userConfigService) {
         this.assertionService = assertionService;
         this.accountIndexCache = accountIndexCache;
+        this.userConfigService = userConfigService;
     }
 
     @Override
@@ -134,6 +139,10 @@ public class PlayerSpawnEventListener implements EventListener<@NotNull PlayerSp
         String account = accountIndexCache.get(
                 new AccountIndexCache(AccountType.PREMIUM_UUID, assertion.uuid().toString()));
         if (account == null) return false;
+        if (!userConfigService.isAutoLoginEnabled(account, BindType.JAVA)) {
+            log.debug("账号已关闭正版自动登录，改走常规登录，account={}", account);
+            return false;
+        }
         // 复用 spawn 阶段生成的进服 token（core 侧不再另建一个），LoginEvent 靠它定位玩家
         Dami.bus().send("PremiumAutoLogin", Map.of(
                 "account", account,
