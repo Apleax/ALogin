@@ -39,4 +39,10 @@ hs_err_pid*.log
 replay_pid*.log
 *.class
 
+### 本地工作区目录 ###
+# 测试服运行目录：放测试用 jar 与其 ALogin/ 配置、日志，不作为交付物
+/TestServer/
+# 发行版产物：稳定可运行的 jar，按版本命名
+/dist/
+
 /docs/
