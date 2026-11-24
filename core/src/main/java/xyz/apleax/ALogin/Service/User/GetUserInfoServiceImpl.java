@@ -7,7 +7,8 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
@@ -27,13 +28,14 @@ public class GetUserInfoServiceImpl {
         this.accountCache = accountCache;
     }
     
-    public Result<UserInfoVO> getUserInfo() {
+    public UserInfoVO getUserInfo() {
         String account = StpUtil.getLoginIdAsString();
-        if (account == null) return null;
+        if (account == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return null;
-        return Result.succeed(new UserInfoVO(accountPO.getAccount(), accountPO.getNickName(), accountPO.getAvatar(),
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
+        return new UserInfoVO(accountPO.getAccount(), accountPO.getNickName(), accountPO.getAvatar(),
                 accountPO.getPremiumUuid() == null ? null : accountPO.getPremiumUuid().toString(),
-                accountPO.getPremiumName()));
+                accountPO.getPremiumName(),
+                accountPO.getBedrockXuid(), accountPO.getBedrockName());
     }
 }

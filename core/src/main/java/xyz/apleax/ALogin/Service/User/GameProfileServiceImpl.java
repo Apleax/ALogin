@@ -11,6 +11,8 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.data.annotation.Ds;
 import xyz.apleax.ALogin.Enum.AccountType;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.GameProfile;
@@ -49,14 +51,14 @@ public class GameProfileServiceImpl {
             try {
                 account = (String) StpUtil.getLoginIdByToken(token);
             } catch (NotLoginException e) {
-                return null;
+                throw ApiException.of(ErrorCode.LOGIN_TOKEN_INVALID);
             }
         } else {
             account = accountIndexCache.get(new AccountIndexCache(AccountType.UUID, uuid));
         }
-        if (account == null) return null;
+        if (account == null) throw ApiException.of(ErrorCode.PROFILE_NOT_FOUND);
         accountPO = accountCache.get(account);
-        if (accountPO == null) return null;
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
         if (token != null && !token.isBlank()) updateLastLoginIp(account, playerIp);
         List<GameProfile.Property> properties = accountPO.getProperties();
         if (properties == null) properties = Collections.emptyList();

@@ -23,12 +23,15 @@ import xyz.apleax.ALogin.ConvertMapper.VOtoBOConvert;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.LoginDevice;
 import xyz.apleax.ALogin.Enum.VerifyCodeType;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
 import xyz.apleax.ALogin.Service.Permission.PermissionService;
 import xyz.apleax.ALogin.Service.Premium.PremiumAssertionService;
 import xyz.apleax.ALogin.Service.Remote.AccountService;
+import xyz.apleax.ALogin.Util.ApiResults;
 import xyz.apleax.ALogin.Util.MailUtil;
 import xyz.apleax.ALogin.VO.*;
 
@@ -78,26 +81,28 @@ public class Account {
     public Result<String> Register(@Validated RegisterVO registerVO, Context context) {
         AccountBO accountBO = VOtoBOConvert.INSTANCE.registerVOToAccountBO(registerVO);
         String verify_code = registerVO.getVerify_code();
-        return accountService.register(accountBO, verify_code, context.realIp());
+        return ApiResults.ok(accountService.register(accountBO, verify_code, context.realIp()));
     }
 
     @SaIgnore
     @Mapping(path = "/VerifyCode", method = MethodType.POST,
             name = "验证码", description = "获取一个验证码发送到请求的邮箱")
-    public Result<Long> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
-        if (verifyCodeVO == null) return Result.failure("请求参数缺失");
+    public Result<Void> VerifyCode(@Validated VerifyCodeVO verifyCodeVO) {
+        if (verifyCodeVO == null) throw ApiException.of(ErrorCode.PARAM_MISSING);
         VerifyCodeKey verifyCodeKey = null;
         if (verifyCodeVO instanceof RegisterVerifyCodeVO registerVerifyCodeVO) {
-            if (!EMAIL_REGEX.matcher(registerVerifyCodeVO.getEmail()).matches()) return Result.failure("邮箱格式错误");
+            if (!EMAIL_REGEX.matcher(registerVerifyCodeVO.getEmail()).matches())
+                throw ApiException.of(ErrorCode.EMAIL_INVALID);
             verifyCodeKey = new VerifyCodeKey(registerVerifyCodeVO.getEmail(), VerifyCodeType.REGISTER);
         }
         if (verifyCodeVO instanceof ResetPasswordVerifyCodeVO resetPasswordVerifyCodeVO) {
             if (!EMAIL_REGEX.matcher(resetPasswordVerifyCodeVO.getEmail()).matches())
-                return Result.failure("邮箱格式错误");
+                throw ApiException.of(ErrorCode.EMAIL_INVALID);
             verifyCodeKey = new VerifyCodeKey(resetPasswordVerifyCodeVO.getEmail(), VerifyCodeType.RESET_PASSWORD);
         }
-        if (verifyCodeKey == null) return Result.failure("请求参数缺失");
-        return accountService.verifyCode(verifyCodeKey);
+        if (verifyCodeKey == null) throw ApiException.of(ErrorCode.PARAM_MISSING);
+        accountService.verifyCode(verifyCodeKey);
+        return ApiResults.ok();
     }
 
     @SaIgnore
@@ -106,13 +111,15 @@ public class Account {
             name = "登录", description = "登录接口，用于登录账号")
     public Result<SaTokenInfo> Login(@Validated LoginVO loginVO, Context ctx) {
         String token = ctx.param("token");
-        return doLogin(loginVO, token == null || token.isBlank() ? null : token, ctx);
+        SaTokenInfo info = doLogin(loginVO, token == null || token.isBlank() ? null : token, ctx);
+        return ApiResults.ok(info);
     }
 
-    private Result<SaTokenInfo> doLogin(LoginVO loginVO, String token, Context ctx) {
+    private SaTokenInfo doLogin(LoginVO loginVO, String token, Context ctx) {
         LoginBO loginBO = null;
         if (loginVO instanceof LoginByEmailVO loginByEmailVO) {
-            if (!EMAIL_REGEX.matcher(loginByEmailVO.getEmail()).matches()) return Result.failure("邮箱格式错误");
+            if (!EMAIL_REGEX.matcher(loginByEmailVO.getEmail()).matches())
+                throw ApiException.of(ErrorCode.EMAIL_INVALID);
             loginBO = VOtoBOConvert.INSTANCE.loginByEmailVOToLoginBO(loginByEmailVO);
             loginBO.setAccount_type(AccountType.EMAIL);
         }
@@ -154,7 +161,8 @@ public class Account {
     @Mapping(path = "/Logout", method = {MethodType.GET, MethodType.POST},
             name = "登出", description = "登出接口")
     public Result<Void> Logout() {
-        return accountService.logout(null);
+        accountService.logout(null);
+        return ApiResults.ok();
     }
 
     @SaIgnore
@@ -162,9 +170,10 @@ public class Account {
     @Mapping(path = "/ResetPassword", method = MethodType.POST,
             name = "重置密码", description = "重置密码接口")
     public Result<Boolean> ResetPassword(@Validated ResetPasswordVO resetPasswordVO) {
-        return accountService.resetPassword(resetPasswordVO.getEmail(),
+        accountService.resetPassword(resetPasswordVO.getEmail(),
                 resetPasswordVO.getVerify_code(),
                 resetPasswordVO.getNew_password());
+        return ApiResults.ok(true);
     }
 
     @Mapping(path = "/RefreshCache", method = MethodType.POST,
@@ -178,7 +187,7 @@ public class Account {
         permissionService.invalidateAll();
         MailUtil.clearTemplateCache();
         log.info("业务缓存刷新成功，account={}", account);
-        return Result.succeed(true);
+        return ApiResults.ok(true);
     }
 
     @SaIgnore
@@ -194,6 +203,6 @@ public class Account {
                     "token", token,
                     "sessionToken", StpUtil.getTokenValue()));
         }
-        return Result.succeed(isLogin);
+        return ApiResults.ok(isLogin);
     }
 }

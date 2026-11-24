@@ -16,8 +16,9 @@ import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
 import org.noear.solon.core.bean.LifecycleBean;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.GameProfile;
 import xyz.apleax.ALogin.Util.AvatarRenderer;
@@ -93,20 +94,20 @@ public class UploadSkinServiceImpl implements LifecycleBean {
     /**
      * 皮肤上传入口：同步只做校验，皮肤格式正确立即返回，实际处理转异步。
      */
-    public Result<Boolean> uploadSkin(UploadedFile skin, String variant) throws IOException {
+    public boolean uploadSkin(UploadedFile skin, String variant) throws IOException {
         String extension = skin.getExtension();
         if (extension == null || !extension.equalsIgnoreCase("png"))
-            return Result.failure("仅支持 PNG 格式的皮肤文件", false);
+            throw ApiException.of(ErrorCode.SKIN_TYPE_UNSUPPORTED);
 
         String account = StpUtil.getLoginIdAsString();
-        if (account == null) return Result.succeed(false);
+        if (account == null) throw ApiException.of(ErrorCode.NOT_LOGIN);
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.succeed(false);
+        if (accountPO == null) throw ApiException.of(ErrorCode.ACCOUNT_NOT_FOUND);
 
         if (skin.getContentSize() > MAX_SKIN_FILE_SIZE) {
             log.warn("皮肤文件超过大小上限，用户: {}，size={} bytes", account, skin.getContentSize());
             skin.delete();
-            return Result.failure("皮肤文件不能超过 200KB", false);
+            throw ApiException.of(ErrorCode.SKIN_TOO_LARGE);
         }
 
         byte[] skinData;
@@ -117,19 +118,19 @@ public class UploadSkinServiceImpl implements LifecycleBean {
         }
         if (skinData == null || skinData.length == 0) {
             log.warn("皮肤文件为空，用户: {}", account);
-            return Result.failure("皮肤文件为空", false);
+            throw ApiException.of(ErrorCode.SKIN_EMPTY);
         }
         if (skinData.length > MAX_SKIN_FILE_SIZE) {
             log.warn("皮肤文件超过大小上限，用户: {}，size={} bytes", account, skinData.length);
-            return Result.failure("皮肤文件不能超过 200KB", false);
+            throw ApiException.of(ErrorCode.SKIN_TOO_LARGE);
         }
         if (!isValidSkinDimension(skinData)) {
             log.warn("皮肤尺寸不合法，用户: {}", account);
-            return Result.failure("皮肤尺寸必须为 64x64 像素", false);
+            throw ApiException.of(ErrorCode.SKIN_DIMENSION_INVALID);
         }
 
         processSkinAsync(account, accountPO.getMcUuid(), accountPO.getNickName(), accountPO.getEmail(), variant, skinData);
-        return Result.succeed(true, "皮肤上传成功，正在处理中");
+        return true;
     }
 
     /**

@@ -32,12 +32,25 @@ mvn -pl entity,core,server,app -am clean test
 | `geyser-extension` | Geyser 侧的基岩版账号对接扩展 |
 | `viaproxy-plugin` | ViaProxy 侧的正版会话校验插件 |
 
+## 本地工作区目录
+
+项目根目录下有两个本地约定目录，均不纳入版本控制：
+
+| 目录 | 用途 |
+|---|---|
+| `TestServer/` | 测试运行目录：放测试用 jar 及其同级的 `ALogin/` 配置与日志；测试产物不作为交付物 |
+| `dist/` | 发行版产物：稳定可运行的 jar，按 `ALogin-<version>.jar` 命名 |
+
+`app/target/` 只是中间产物，可随时清理；发版与部署一律从 `dist/` 取。
+
+测试时把 jar 放在 `TestServer/` 内启动，配置目录会生成在其同级，不要直接在仓库根启动，否则仓库根会多出一个 `ALogin/` 运行目录。
+
 ## 提交改动
 
 1. 从最新 `master` 拉出分支，命名建议 `feat/…`、`fix/…`、`refactor/…`
 2. 改动保持聚焦，不要顺带重排无关代码或调整无关格式
 3. 本地测试通过后再提交
-4. 提交 PR，说明改了什么、影响范围、如何验证
+4. 提交 PR，说明改了什么、影响范围
 
 `master` 保持线性历史，PR 统一使用 **Squash and merge**，合并后删除源分支。
 
@@ -58,3 +71,4 @@ mvn -pl entity,core,server,app -am clean test
 - 版本号只在根 `pom.xml` 的 `<revision>` 维护，其余模块与资源均引用 `${revision}`
 - 遵循语义化版本：新增对外可见的接口契约或字段为 minor，缺陷修复为 patch
 - 发布提交使用 `chore(release): 版本号定为 X.Y.Z`，并在 `master` 的该提交上打 `vX.Y.Z` 标签
+- 构建完成后把 `app/target/ALogin.jar` 复制为 `dist/ALogin-<version>.jar`，作为该版本的发行产物

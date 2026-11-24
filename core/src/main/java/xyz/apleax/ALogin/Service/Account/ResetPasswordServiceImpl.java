@@ -8,11 +8,12 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.VerifyCodeType;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.POJO.VerifyCodeKey;
@@ -56,12 +57,12 @@ public class ResetPasswordServiceImpl {
      * @param new_password 新密码
      */
     @Transaction
-    public Result<Boolean> resetPassword(String email, String verify_code, String new_password) {
-        if (email == null || email.isBlank()) return Result.failure("邮箱不能为空");
-        if (new_password == null || new_password.isEmpty()) return Result.failure("新密码不能为空");
+    public void resetPassword(String email, String verify_code, String new_password) {
+        if (email == null || email.isBlank()) throw ApiException.of(ErrorCode.EMAIL_EMPTY);
+        if (new_password == null || new_password.isEmpty()) throw ApiException.of(ErrorCode.NEW_PASSWORD_EMPTY);
 
         if (checkVerifyCode(new VerifyCodeKey(email, VerifyCodeType.RESET_PASSWORD), verify_code))
-            return Result.failure("验证码错误");
+            throw ApiException.of(ErrorCode.VERIFY_CODE_INVALID);
 
         String salt = RandomStringUtils.generateLowerUpper(32);
         String password = encryptor.encrypt(new_password, salt);
@@ -74,14 +75,14 @@ public class ResetPasswordServiceImpl {
                 .eq(AccountPO::getEmail, email));
         if (!updated) {
             log.warn("重置密码失败：邮箱未注册，email={}", email);
-            return Result.failure("该邮箱未注册");
+            throw ApiException.of(ErrorCode.EMAIL_NOT_REGISTERED);
         }
         log.info("重置密码成功：email={}, algorithm={}", email, algorithm);
 
         String account = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, email));
         if (account == null) {
             log.error("邮箱 [{}] 密码已重置，但账号索引查询失败，无法强制登出/发送通知", email);
-            return Result.succeed(true);
+            return;
         }
 
         accountCache.invalidate(account);
@@ -93,7 +94,5 @@ public class ResetPasswordServiceImpl {
         }
         
         MailUtil.sendPasswordResetNotifyAsync(email, account);
-
-        return Result.succeed(true);
     }
 }

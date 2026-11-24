@@ -7,13 +7,14 @@ import org.jetbrains.annotations.NotNull;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.BO.AccountBO;
 import xyz.apleax.ALogin.ConvertMapper.BOtoPOConvert;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.VerifyCodeType;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.PO.LibreLoginPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
@@ -77,30 +78,31 @@ public class RegisterServiceImpl {
      * @see AccountBO
      */
     @Transaction
-    public Result<String> register(AccountBO accountBO, String verify_code, String real_ip) {
-        if (accountBO == null) return Result.failure("请求参数缺失");
+    public String register(AccountBO accountBO, String verify_code, String real_ip) {
+        if (accountBO == null) throw ApiException.of(ErrorCode.PARAM_MISSING);
         String email = accountBO.getEmail();
-        if (email == null || email.isBlank()) return Result.failure("邮箱不能为空");
-        if (accountBO.getPassword() == null || accountBO.getPassword().isEmpty()) return Result.failure("密码不能为空");
+        if (email == null || email.isBlank()) throw ApiException.of(ErrorCode.EMAIL_EMPTY);
+        if (accountBO.getPassword() == null || accountBO.getPassword().isEmpty())
+            throw ApiException.of(ErrorCode.PASSWORD_EMPTY);
 
         if (checkVerifyCode(new VerifyCodeKey(email, VerifyCodeType.REGISTER), verify_code))
-            return Result.failure("验证码错误");
+            throw ApiException.of(ErrorCode.VERIFY_CODE_INVALID);
 
         String existing = accountIndexCache.get(new AccountIndexCache(AccountType.EMAIL, email));
-        if (existing != null) return Result.failure("该邮箱已注册");
+        if (existing != null) throw ApiException.of(ErrorCode.EMAIL_TAKEN);
 
-        if (!populateAccount(accountBO)) return Result.failure("注册失败，请稍后再试");
+        if (!populateAccount(accountBO)) throw ApiException.of(ErrorCode.REGISTER_FAILED);
         AccountPO accountPO = BOtoPOConvert.INSTANCE.registerBOToAccountPO(accountBO);
 
         try {
             if (!accountService.save(accountPO)) {
                 log.warn("保存账号失败（未知原因），email={}, realIp={}", email, real_ip);
-                return Result.failure("注册失败，请稍后再试");
+                throw ApiException.of(ErrorCode.REGISTER_FAILED);
             }
         } catch (Exception e) {
             if (isDuplicateKey(e)) {
                 log.warn("注册冲突（UNIQUE 索引），email={}, msg={}", email, e.getMessage());
-                return Result.failure("该邮箱已注册");
+                throw ApiException.of(ErrorCode.EMAIL_TAKEN);
             }
             log.error("注册时发生未预期异常，email={}", email, e);
             throw e;  // 让事务回滚
@@ -111,7 +113,7 @@ public class RegisterServiceImpl {
         accountIndexCache.invalidate(new AccountIndexCache(AccountType.EMAIL, email));
         accountCache.invalidate(account);
         log.info("注册成功，account={}, email={}, mcUuid={}", account, email, accountBO.getMcUuid());
-        return Result.succeed(account);
+        return account;
     }
 
     /**

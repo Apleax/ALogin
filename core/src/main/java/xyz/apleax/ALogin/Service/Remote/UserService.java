@@ -1,9 +1,9 @@
 package xyz.apleax.ALogin.Service.Remote;
 
 import org.noear.dami2.solon.annotation.DamiTopic;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.core.handle.UploadedFile;
 import xyz.apleax.ALogin.POJO.GameProfile;
+import xyz.apleax.ALogin.VO.UserConfigVO;
 import xyz.apleax.ALogin.VO.UserInfoVO;
 
 /**
@@ -16,7 +16,7 @@ public interface UserService {
     /**
      * 当前登录用户信息
      */
-    Result<UserInfoVO> getUserInfo();
+    UserInfoVO getUserInfo();
 
     /**
      * 上传皮肤
@@ -24,14 +24,14 @@ public interface UserService {
      * @param skin    皮肤文件
      * @param variant 皮肤类型（SLIM/CLASSIC）
      */
-    Result<Boolean> uploadSkin(UploadedFile skin, String variant);
+    boolean uploadSkin(UploadedFile skin, String variant);
 
     /**
      * 修改昵称
      *
      * @param nickname 新昵称
      */
-    Result<Boolean> changeNickName(String nickname);
+    void changeNickName(String nickname);
 
     /**
      * 渲染玩家头像（头部正面，可选叠加帽子层）
@@ -51,4 +51,18 @@ public interface UserService {
      * @param playerIp 代理上报的真实客户端 IP（可空，仅 token 分支生效）
      */
     GameProfile GameProfile(String token, String uuid, String playerIp);
+
+    /**
+     * 当前登录用户的配置（自动登录开关等）
+     */
+    UserConfigVO getUserConfig();
+
+    /**
+     * 开关当前登录用户的自动登录
+     *
+     * @param type    绑定类型（java/bedrock 的 key）
+     * @param enabled 是否开启
+     * @return 最新配置
+     */
+    UserConfigVO setAutoLogin(String type, boolean enabled);
 }

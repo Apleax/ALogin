@@ -8,7 +8,10 @@ import org.noear.solon.core.handle.MethodType;
 import org.noear.solon.core.handle.Result;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.Service.Permission.PermissionService;
+import xyz.apleax.ALogin.Util.ApiResults;
 import xyz.apleax.ALogin.VO.PermissionNodeBatchVO;
 
 /**
@@ -41,10 +44,10 @@ public class PermissionManage {
         String requirePermission = permissionService.writePermission();
         if (requirePermission != null && !requirePermission.isBlank()) StpUtil.checkPermission(requirePermission);
 
-        if (!permissionService.writeEnabled()) return Result.failure("权限写入未开启", false);
+        if (!permissionService.writeEnabled()) throw ApiException.of(ErrorCode.PERMISSION_WRITE_DISABLED);
         boolean empty = (permissionNodeBatchVO.getAdd() == null || permissionNodeBatchVO.getAdd().isEmpty())
                 && (permissionNodeBatchVO.getRemove() == null || permissionNodeBatchVO.getRemove().isEmpty());
-        if (empty) return Result.failure("没有需要变更的权限节点", false);
+        if (empty) throw ApiException.of(ErrorCode.PERMISSION_NODES_EMPTY);
 
         String operator = StpUtil.getLoginIdAsString();
         try {
@@ -52,8 +55,8 @@ public class PermissionManage {
                     permissionNodeBatchVO.getAdd(), permissionNodeBatchVO.getRemove());
         } catch (IllegalStateException e) {
             log.warn("权限变更失败，操作者={}，目标={}: {}", operator, permissionNodeBatchVO.getTarget(), e.getMessage());
-            return Result.failure(e.getMessage(), false);
+            throw ApiException.of(ErrorCode.PERMISSION_CHANGE_FAILED, e.getMessage());
         }
-        return Result.succeed(true);
+        return ApiResults.ok(true);
     }
 }

@@ -6,7 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.POJO.PremiumProfile;
 
 import java.io.IOException;
@@ -61,16 +62,16 @@ public class PremiumOAuthService {
      *
      * @param status         轮询状态
      * @param microsoftToken 成功时的微软 access_token
-     * @param userMessage    失败原因
+     * @param errorCode      失败原因（等待时为 null）
      */
-    public record DevicePoll(Status status, String microsoftToken, String userMessage) {
+    public record DevicePoll(Status status, String microsoftToken, ErrorCode errorCode) {
         public enum Status {PENDING, SLOW_DOWN, SUCCESS, FAILED}
     }
 
     /**
      * 申请设备码
      */
-    public Result<DeviceCode> startDeviceCode() {
+    public DeviceCode startDeviceCode() {
         String form = "client_id=" + encode(CLIENT_ID)
                 + "&scope=" + encode(SCOPE)
                 + "&response_type=device_code";
@@ -86,24 +87,26 @@ public class PremiumOAuthService {
             if (response.statusCode() != 200) {
                 log.warn("申请微软设备码失败：status={}, error={}",
                         response.statusCode(), body.path("error").asText(""));
-                return Result.failure("微软授权服务不可用，请稍后再试");
+                throw ApiException.of(ErrorCode.PREMIUM_SERVICE_UNAVAILABLE);
             }
             String deviceCode = body.path("device_code").asText("");
             String userCode = body.path("user_code").asText("");
             if (deviceCode.isEmpty() || userCode.isEmpty()) {
                 log.warn("申请微软设备码响应异常：{}", truncate(response.body()));
-                return Result.failure("微软授权服务响应异常，请稍后再试");
+                throw ApiException.of(ErrorCode.PREMIUM_RESPONSE_INVALID);
             }
-            return Result.succeed(new DeviceCode(deviceCode, userCode,
+            return new DeviceCode(deviceCode, userCode,
                     body.path("verification_uri").asText("https://www.microsoft.com/link"),
                     Math.max(1, body.path("interval").asLong(5)),
-                    Math.max(60, body.path("expires_in").asLong(900))));
+                    Math.max(60, body.path("expires_in").asLong(900)));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return Result.failure("请求被中断，请重试");
+            throw ApiException.of(ErrorCode.REQUEST_INTERRUPTED);
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("申请微软设备码异常：{}", e.getMessage());
-            return Result.failure("微软授权服务连接失败，请稍后再试");
+            throw ApiException.of(ErrorCode.PREMIUM_CONNECT_FAILED);
         }
     }
 
@@ -127,26 +130,28 @@ public class PremiumOAuthService {
                 String token = body.path("access_token").asText("");
                 if (!token.isEmpty()) return new DevicePoll(DevicePoll.Status.SUCCESS, token, null);
                 log.warn("微软设备码轮询响应缺少 access_token：{}", truncate(response.body()));
-                return new DevicePoll(DevicePoll.Status.FAILED, null, "微软授权响应异常，请重试");
+                return new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.PREMIUM_POLL_INVALID);
             }
             String error = body.path("error").asText("");
             return switch (error) {
                 case "authorization_pending" -> new DevicePoll(DevicePoll.Status.PENDING, null, null);
                 case "slow_down" -> new DevicePoll(DevicePoll.Status.SLOW_DOWN, null, null);
-                case "authorization_declined" -> new DevicePoll(DevicePoll.Status.FAILED, null, "已拒绝微软账号授权");
-                case "expired_token" -> new DevicePoll(DevicePoll.Status.FAILED, null, "授权码已过期，请重新发起");
+                case "authorization_declined" ->
+                        new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.PREMIUM_AUTH_DECLINED);
+                case "expired_token" ->
+                        new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.PREMIUM_CODE_EXPIRED);
                 default -> {
                     log.warn("微软设备码轮询失败：status={}, error={}, description={}",
                             response.statusCode(), error, body.path("error_description").asText(""));
-                    yield new DevicePoll(DevicePoll.Status.FAILED, null, "微软账号授权失败，请重试");
+                    yield new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.PREMIUM_AUTH_FAILED);
                 }
             };
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new DevicePoll(DevicePoll.Status.FAILED, null, "授权请求被中断，请重试");
+            return new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.REQUEST_INTERRUPTED);
         } catch (Exception e) {
             log.warn("微软设备码轮询异常：{}", e.getMessage());
-            return new DevicePoll(DevicePoll.Status.FAILED, null, "微软授权服务连接失败，请稍后再试");
+            return new DevicePoll(DevicePoll.Status.FAILED, null, ErrorCode.PREMIUM_CONNECT_FAILED);
         }
     }
 
@@ -154,28 +159,30 @@ public class PremiumOAuthService {
      * 用微软 token 换正版档案
      *
      * @param microsoftToken 微软 access_token
-     * @return 正版档案或失败原因
+     * @return 正版档案
      */
-    public Result<PremiumProfile> resolveProfile(String microsoftToken) {
+    public PremiumProfile resolveProfile(String microsoftToken) {
         if (microsoftToken == null || microsoftToken.isBlank())
-            return Result.failure("微软授权缺失，请重新发起");
+            throw ApiException.of(ErrorCode.MICROSOFT_TOKEN_MISSING);
         try {
             XblSession xbl = xboxLiveAuthenticate(microsoftToken);
             String xstsToken = xstsAuthorize(xbl.token());
             String mcToken = minecraftLogin(xbl.uhs(), xstsToken);
             PremiumProfile profile = fetchProfile(mcToken);
             log.info("正版验证成功：正版 UUID={}, 名称={}", profile.uuid(), profile.name());
-            return Result.succeed(profile);
+            return profile;
         } catch (AuthException e) {
             log.warn("正版验证失败：{}", e.getMessage());
-            return Result.failure(e.userMessage);
+            throw e.args == null || e.args.length == 0
+                    ? ApiException.causedBy(e.code, e)
+                    : ApiException.causedBy(e.code, e, e.args);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("正版验证被中断");
-            return Result.failure("正版验证被中断，请重试");
+            throw ApiException.of(ErrorCode.PREMIUM_VERIFY_INTERRUPTED);
         } catch (Exception e) {
             log.error("正版验证异常", e);
-            return Result.failure("正版验证服务异常，请稍后再试");
+            throw ApiException.of(ErrorCode.PREMIUM_VERIFY_FAILED);
         }
     }
 
@@ -195,11 +202,11 @@ public class PremiumOAuthService {
         JsonNode body = parseBody(response);
         if (response.statusCode() != 200) {
             log.warn("Xbox Live 认证失败：status={}, XErr={}", response.statusCode(), body.path("XErr").asLong(0));
-            throw new AuthException("Xbox Live 认证失败，请稍后重试");
+            throw new AuthException(ErrorCode.XBOX_AUTH_FAILED);
         }
         String token = body.path("Token").asText("");
         String uhs = body.path("DisplayClaims").path("xui").path(0).path("uhs").asText("");
-        if (token.isEmpty() || uhs.isEmpty()) throw new AuthException("Xbox Live 认证响应异常");
+        if (token.isEmpty() || uhs.isEmpty()) throw new AuthException(ErrorCode.XBOX_RESPONSE_INVALID);
         return new XblSession(token, uhs);
     }
 
@@ -220,10 +227,11 @@ public class PremiumOAuthService {
             long xerr = body.path("XErr").asLong(0);
             log.warn("XSTS 授权失败：status={}, XErr={}, message={}",
                     response.statusCode(), xerr, body.path("Message").asText(""));
-            throw new AuthException(xstsErrorMessage(xerr));
+            ErrorCode code = xstsErrorCode(xerr);
+            throw code == ErrorCode.XSTS_AUTH_FAILED ? new AuthException(code, xerr) : new AuthException(code);
         }
         String token = body.path("Token").asText("");
-        if (token.isEmpty()) throw new AuthException("XSTS 授权响应异常");
+        if (token.isEmpty()) throw new AuthException(ErrorCode.XSTS_RESPONSE_INVALID);
         return token;
     }
 
@@ -245,7 +253,7 @@ public class PremiumOAuthService {
                     .put("platform", "PC_LAUNCHER")
                     .put("xtoken", xblToken));
         } catch (AuthException e) {
-            throw new AuthException("Minecraft 登录失败（HTTP " + firstStatus + "/" + e.status + "），请稍后重试或联系管理员");
+            throw new AuthException(ErrorCode.MINECRAFT_LOGIN_FAILED, firstStatus, e.status);
         }
     }
 
@@ -254,13 +262,13 @@ public class PremiumOAuthService {
         JsonNode body = parseBody(response);
         if (response.statusCode() != 200) {
             log.warn("Minecraft 登录失败：url={}, status={}, body={}", url, response.statusCode(), truncate(response.body()));
-            throw new AuthException("Minecraft 登录失败", response.statusCode());
+            throw new AuthException(ErrorCode.MINECRAFT_LOGIN_FAILED_SIMPLE, response.statusCode());
         }
         String token = body.path("access_token").asText("");
         if (token.isEmpty()) {
             log.warn("Minecraft 登录响应缺少 access_token：url={}, status={}, body={}",
                     url, response.statusCode(), truncate(response.body()));
-            throw new AuthException("Minecraft 登录响应异常", response.statusCode());
+            throw new AuthException(ErrorCode.MINECRAFT_RESPONSE_INVALID, response.statusCode());
         }
         return token;
     }
@@ -277,15 +285,15 @@ public class PremiumOAuthService {
                 .build());
         if (response.statusCode() == 404) {
             log.warn("获取 Minecraft 档案失败（无 Java 版档案）：body={}", truncate(response.body()));
-            throw new AuthException("该微软账号没有 Minecraft Java 版档案（未购买或未创建档案）");
+            throw new AuthException(ErrorCode.MINECRAFT_PROFILE_ABSENT);
         }
         if (response.statusCode() != 200) {
             log.warn("获取 Minecraft 档案失败：status={}, body={}", response.statusCode(), truncate(response.body()));
-            throw new AuthException("获取 Minecraft 档案失败，请稍后重试");
+            throw new AuthException(ErrorCode.MINECRAFT_PROFILE_FAILED);
         }
         JsonNode body = parseBody(response);
         String id = body.path("id").asText("");
-        if (id.isEmpty()) throw new AuthException("Minecraft 档案响应异常");
+        if (id.isEmpty()) throw new AuthException(ErrorCode.PREMIUM_VERIFY_INVALID);
         return new PremiumProfile(parseProfileId(id), body.path("name").asText(""));
     }
 
@@ -317,12 +325,12 @@ public class PremiumOAuthService {
         }
     }
 
-    private static String xstsErrorMessage(long xerr) {
-        if (xerr == 2148916233L) return "该微软账号还没有 Xbox 档案，请先登录 xbox.com 创建";
-        if (xerr == 2148916235L) return "该账号所在地区不支持 Xbox Live";
-        if (xerr == 2148916236L || xerr == 2148916237L) return "该账号需要进行年龄验证（仅韩国地区）";
-        if (xerr == 2148916238L) return "未成年账号需先加入 Microsoft 家庭组";
-        return "该微软账号无法登录 Xbox Live（错误码 " + xerr + "）";
+    private static ErrorCode xstsErrorCode(long xerr) {
+        if (xerr == 2148916233L) return ErrorCode.XSTS_NO_XBOX_PROFILE;
+        if (xerr == 2148916235L) return ErrorCode.XSTS_REGION_UNSUPPORTED;
+        if (xerr == 2148916236L || xerr == 2148916237L) return ErrorCode.XSTS_AGE_VERIFICATION;
+        if (xerr == 2148916238L) return ErrorCode.XSTS_FAMILY_REQUIRED;
+        return ErrorCode.XSTS_AUTH_FAILED;
     }
 
     private static UUID parseProfileId(String profileId) {
@@ -345,17 +353,27 @@ public class PremiumOAuthService {
     }
 
     private static class AuthException extends RuntimeException {
-        final String userMessage;
+        final ErrorCode code;
         final int status;
+        final Object[] args;
 
-        AuthException(String userMessage) {
-            this(userMessage, -1);
+        AuthException(ErrorCode code) {
+            this(code, -1, null);
         }
 
-        AuthException(String userMessage, int status) {
-            super(userMessage);
-            this.userMessage = userMessage;
+        AuthException(ErrorCode code, int status) {
+            this(code, status, null);
+        }
+
+        AuthException(ErrorCode code, Object... args) {
+            this(code, -1, args);
+        }
+
+        private AuthException(ErrorCode code, int status, Object[] args) {
+            super(code.message());
+            this.code = code;
             this.status = status;
+            this.args = args;
         }
     }
 }

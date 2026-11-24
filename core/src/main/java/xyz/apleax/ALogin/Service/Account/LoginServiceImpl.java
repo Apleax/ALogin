@@ -10,12 +10,13 @@ import org.noear.dami2.Dami;
 import org.noear.dami2.solon.annotation.DamiTopic;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Managed;
-import org.noear.solon.core.handle.Result;
 import org.noear.solon.data.annotation.Ds;
 import org.noear.solon.data.annotation.Transaction;
 import xyz.apleax.ALogin.BO.LoginBO;
 import xyz.apleax.ALogin.Enum.AccountType;
 import xyz.apleax.ALogin.Enum.LoginDevice;
+import xyz.apleax.ALogin.Error.ApiException;
+import xyz.apleax.ALogin.Error.ErrorCode;
 import xyz.apleax.ALogin.PO.AccountPO;
 import xyz.apleax.ALogin.POJO.AccountIndexCache;
 import xyz.apleax.ALogin.SQL.Service.IAccountService;
@@ -64,30 +65,30 @@ public class LoginServiceImpl {
      * 的旧会话。登录方式（email/account/...）写入 Token-Session 的 loginMethod，仅作审计。
      */
     @Transaction
-    public Result<SaTokenInfo> login(LoginBO loginBO, String token) {
-        if (loginBO == null) return Result.failure("请求参数缺失");
+    public SaTokenInfo login(LoginBO loginBO, String token) {
+        if (loginBO == null) throw ApiException.of(ErrorCode.PARAM_MISSING);
         AccountType accountType = loginBO.getAccount_type();
-        if (accountType == null) return Result.failure("登录类型缺失");
+        if (accountType == null) throw ApiException.of(ErrorCode.LOGIN_TYPE_MISSING);
         if (accountType == AccountType.UUID) {
             log.debug("拒绝 UUID 登录尝试，realIp={}", loginBO.getReal_ip());
-            return Result.failure("暂不支持该登录方式");
+            throw ApiException.of(ErrorCode.LOGIN_TYPE_UNSUPPORTED);
         }
         LoginDevice device = loginBO.getDevice() == null ? LoginDevice.WEB : loginBO.getDevice();
         String rawPassword = loginBO.getPassword();
-        if (rawPassword == null || rawPassword.isEmpty()) return Result.failure("密码不能为空");
+        if (rawPassword == null || rawPassword.isEmpty()) throw ApiException.of(ErrorCode.PASSWORD_EMPTY);
         String realIp = loginBO.getReal_ip();
         if (!ClientIp.isValid(realIp)) {
             log.warn("登录请求携带缺失或非法的 real_ip，已拒绝，len={}", realIp == null ? 0 : realIp.length());
-            return Result.failure("无法获取客户端 IP，请稍后再试");
+            throw ApiException.of(ErrorCode.IP_UNAVAILABLE);
         }
 
         String account = getAccountId(loginBO, accountType);
         if (account == null) {
             log.debug("登录失败：账号不存在，type={}, realIp={}", accountType, realIp);
-            return Result.failure(accountType.getValue() + "或密码错误");
+            throw ApiException.of(ErrorCode.CREDENTIAL_MISMATCH, accountType.getValue());
         }
         AccountPO accountPO = accountCache.get(account);
-        if (accountPO == null) return Result.failure(accountType.getValue() + "或密码错误");
+        if (accountPO == null) throw ApiException.of(ErrorCode.CREDENTIAL_MISMATCH, accountType.getValue());
 
         String currentLoginId = StpUtil.isLogin() ? StpUtil.getLoginIdAsString() : null;
         if (account.equals(currentLoginId)) {
@@ -98,7 +99,7 @@ public class LoginServiceImpl {
                 dispatchLoginEvent(account, token, tokenInfo.getTokenValue());
                 log.info("登录成功，email={}, mcUuid={}, loginMethod={}, device={}（复用当前会话）",
                         accountPO.getEmail(), accountPO.getMcUuid(), accountType.getKey(), device.getKey());
-                return Result.succeed(tokenInfo);
+                return tokenInfo;
             }
             if (storedIp != null && storedIp.equals(realIp)) {
                 log.info("当前会话 device={} 与本次登录 device={} 不一致，为 {} 端新建会话，account={}",
@@ -114,7 +115,7 @@ public class LoginServiceImpl {
         String storedSalt = accountPO.getSalt();
         if (storedPassword == null || storedSalt == null) {
             log.warn("账号 [{}] 密码或盐值缺失，无法登录", account);
-            return Result.failure(accountType.getValue() + "或密码错误");
+            throw ApiException.of(ErrorCode.CREDENTIAL_MISMATCH, accountType.getValue());
         }
 
         String storedAlgorithm = accountPO.getAlgorithm();
@@ -126,13 +127,13 @@ public class LoginServiceImpl {
             actualEncryptor = selector.select(storedAlgorithm);
             if (actualEncryptor == null) {
                 log.error("账号 [{}] 使用的加密算法 [{}] 已不可用，无法登录", account, storedAlgorithm);
-                return Result.failure("该账号使用的加密算法已失效，请联系管理员");
+                throw ApiException.of(ErrorCode.ALGORITHM_UNAVAILABLE);
             }
         }
         String hashed = actualEncryptor.encrypt(rawPassword, storedSalt);
         if (!storedPassword.equals(hashed)) {
             log.debug("登录失败：密码错误，account={}", account);
-            return Result.failure(accountType.getValue() + "或密码错误");
+            throw ApiException.of(ErrorCode.CREDENTIAL_MISMATCH, accountType.getValue());
         }
 
         if (device == LoginDevice.BEDROCK) {
@@ -146,7 +147,7 @@ public class LoginServiceImpl {
                     .eq(AccountPO::getAccount, account));
             if (!updated) {
                 log.error("更新最后登录 IP 失败，拒绝登录，account={}", account);
-                return Result.failure("登录失败，请稍后再试");
+                throw ApiException.of(ErrorCode.LOGIN_PERSIST_FAILED);
             }
             accountCache.invalidate(account);
         }
@@ -158,7 +159,7 @@ public class LoginServiceImpl {
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
         // 本次登录刚生成的 token 随事件下发，避免下游按 account 反查"最后一个 token"取错端
         dispatchLoginEvent(account, token, tokenInfo.getTokenValue());
-        return Result.succeed(tokenInfo);
+        return tokenInfo;
     }
 
     private void dispatchLoginEvent(String account, String token, String sessionToken) {

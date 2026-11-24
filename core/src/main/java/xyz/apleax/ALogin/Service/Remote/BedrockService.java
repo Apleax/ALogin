@@ -1,7 +1,6 @@
 package xyz.apleax.ALogin.Service.Remote;
 
 import org.noear.dami2.solon.annotation.DamiTopic;
-import org.noear.solon.core.handle.Result;
 
 /**
  * 基岩版（XUID）免密登录与绑定服务契约（Dami LPC topic: bedrock）
@@ -18,7 +17,7 @@ public interface BedrockService {
      * @param name 基岩版游戏名（可为空）
      * @return 可写入进服 cookie 的 sa-token
      */
-    Result<String> autoLogin(String key, String xuid, String name);
+    String autoLogin(String key, String xuid, String name);
 
     /**
      * 把 XUID 绑定到 token 对应的账号
@@ -28,5 +27,10 @@ public interface BedrockService {
      * @param xuid  Xbox 账号的 XUID
      * @param name  基岩版游戏名（可为空）
      */
-    Result<Boolean> bind(String key, String token, String xuid, String name);
+    void bind(String key, String token, String xuid, String name);
+
+    /**
+     * 解除当前登录账号的基岩版绑定
+     */
+    void unbindBedrock();
 }
