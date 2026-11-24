@@ -50,7 +50,7 @@ mvn -pl entity,core,server,app -am clean test
 1. 从最新 `master` 拉出分支，命名建议 `feat/…`、`fix/…`、`refactor/…`
 2. 改动保持聚焦，不要顺带重排无关代码或调整无关格式
 3. 本地测试通过后再提交
-4. 提交 PR，说明改了什么、影响范围、如何验证
+4. 提交 PR，说明改了什么、影响范围
 
 `master` 保持线性历史，PR 统一使用 **Squash and merge**，合并后删除源分支。
 
