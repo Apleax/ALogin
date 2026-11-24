@@ -252,8 +252,6 @@ public class PremiumServiceImpl implements LifecycleBean {
 
     /**
      * 解除当前登录账号的正版（Java）绑定
-     * <p>
-     * 用 {@link LambdaUpdateWrapper#set} 显式写 null：{@code updateById} 会忽略 null 字段，无法把列清空。
      */
     public void unbindPremium() {
         String account = StpUtil.getLoginIdAsString();

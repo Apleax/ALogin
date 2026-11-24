@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 用户配置（一列一设置）。无行 == 全部取默认值，绑定流程不写本表。
+ * 用户配置（一列一设置）
  *
  * @author Apleax
  */

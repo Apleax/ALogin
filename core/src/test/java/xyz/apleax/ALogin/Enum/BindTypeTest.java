@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * 解绑请求参数（type）到 {@link BindType} 的映射：大小写不敏感，未知/空值一律返回 null 交由调用方报错
+ * {@link BindType} 的参数映射
  */
 class BindTypeTest {
 

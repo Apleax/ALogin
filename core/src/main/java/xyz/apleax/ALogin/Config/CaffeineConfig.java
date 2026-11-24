@@ -98,8 +98,7 @@ public record CaffeineConfig(@Ds("DataBase") IAccountService accountService,
                 });
     }
 
-    // 用户配置缓存：无行时返回默认对象（两个开关都是开）。返回的是内存对象而不是 null，
-    // 既不写库也不会被当成"无缓存"反复回源；默认值语义只在 UserConfigServiceImpl 里解释
+    // 用户配置缓存：无行时返回默认对象（两个开关都是开），由 UserConfigServiceImpl 解释
     @Managed(name = "UserConfigCache", index = -100)
     public LoadingCache<@NotNull String, UserConfigPO> UserConfigCache() {
         return Caffeine.newBuilder()

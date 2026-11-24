@@ -17,11 +17,7 @@ import xyz.apleax.ALogin.SQL.Service.IUserConfigService;
 import xyz.apleax.ALogin.VO.UserConfigVO;
 
 /**
- * 用户配置的唯一入口：自动登录开关的读写都走这里。
- * <p>
- * 三处免密登录链路（正版自动登录、基岩版自动登录、进服 spawn 兜底）只调用
- * {@link #isAutoLoginEnabled(String, BindType)}，"无行即开启"的默认值语义与空值判断
- * 只在本类实现一次，新增配置项时不需要再改调用方。
+ * 用户配置入口（自动登录开关等）
  *
  * @author Apleax
  */
@@ -44,7 +40,6 @@ public class UserConfigServiceImpl {
     public boolean isAutoLoginEnabled(String account, BindType type) {
         if (type == null) throw ApiException.of(ErrorCode.BIND_TYPE_INVALID);
         UserConfigPO cfg = userConfigCache.get(account);
-        // null 视为开启：库里两列都是 NOT NULL，只有内存默认对象才可能出现 null
         return switch (type) {
             case JAVA -> !Boolean.FALSE.equals(cfg.getAutoLoginJava());
             case BEDROCK -> !Boolean.FALSE.equals(cfg.getAutoLoginBedrock());
@@ -61,17 +56,10 @@ public class UserConfigServiceImpl {
     }
 
     /**
-     * 设置指定账号的开关并返回最新配置。
-     * <p>
-     * 方法名与 Dami 契约方法 {@link #setAutoLogin(String, boolean)} 必须不同：Dami2 按方法名分发，
-     * 同名重载会让提供方挑错方法（实测报 {@code IllegalArgumentException: argument type mismatch}），
-     * 因此这里刻意不复用 {@code setAutoLogin} 这个名字。
-     *
-     * @param type 非法（null）抛 {@link ErrorCode#BIND_TYPE_INVALID}，入库失败抛 {@link ErrorCode#UPDATE_FAILED}
+     * 设置指定账号的开关并返回最新配置
      */
     public UserConfigVO applyAutoLogin(String account, BindType type, boolean enabled) {
         if (type == null) throw ApiException.of(ErrorCode.BIND_TYPE_INVALID);
-        // 必须从库里取（不能拿缓存里的默认对象）：upsert 判据依赖真实行的 id
         UserConfigPO userConfig = userConfigService.getOne(new LambdaQueryWrapper<UserConfigPO>()
                 .eq(UserConfigPO::getAccount, account));
         if (userConfig == null) userConfig = UserConfigPO.defaults(account);

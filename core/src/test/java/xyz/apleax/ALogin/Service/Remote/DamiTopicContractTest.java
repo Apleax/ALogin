@@ -102,11 +102,7 @@ class DamiTopicContractTest {
     }
 
     /**
-     * Dami 提供方类不得存在同名 public 重载。
-     * <p>
-     * Dami2 按"主题 + 方法名"派发，同名重载会让提供方挑到参数不匹配的那个方法，运行期抛
-     * {@code IllegalArgumentException: argument type mismatch}（已实测发生）。编译器不报错，
-     * 上面两条断言也只按"方法名+参数"精确匹配，同样发现不了重载歧义，因此单独兜底。
+     * Dami 提供方类不得存在同名 public 重载（按方法名派发，重载会挑错方法）
      */
     @Test
     void implsHaveNoPublicOverloads() {

@@ -3,10 +3,7 @@ package xyz.apleax.ALogin.Enum;
 import lombok.Getter;
 
 /**
- * 可解绑的绑定类型（接口请求参数维度）。
- * <p>
- * 与 {@link AccountType} 区分：这里是"玩家要解绑哪一种绑定"的请求参数，只有正版与基岩版两种；
- * {@code AccountType} 是登录凭证/缓存索引维度，包含邮箱、账号等与绑定无关的取值。
+ * 账号绑定类型（解绑与自动登录开关的请求参数）
  *
  * @author Apleax
  */
